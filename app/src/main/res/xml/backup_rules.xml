@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include alarms and settings in backup -->
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+
+    <!-- Exclude voice recognition models (too large) -->
+    <exclude domain="file" path="models/" />
+</full-backup-content>

@@ -1,0 +1,54 @@
+VoiceBell is a privacy-focused alarm clock designed to work 100% offline. All voice recognition happens on your device using Vosk - no data is ever sent to servers.
+
+<b>Key Features:</b>
+
+• <b>Offline Voice Commands</b> - Set alarms and timers using natural English commands, completely offline
+• <b>Advanced Alarms</b> - Repeating schedules, gradual volume increase, snooze, and customizable tones
+• <b>Pre-Alarms for Deep Sleepers</b> - Configure 1-10 gentle pre-alarms before your main alarm
+• <b>Timer & Stopwatch</b> - Full-featured timer with lap tracking
+• <b>World Clocks</b> - Track time across multiple time zones
+• <b>Material Design 3</b> - Beautiful, modern interface with dynamic theming
+• <b>100% Privacy</b> - No internet permission, no tracking, no analytics
+
+<b>Privacy Guaranteed:</b>
+
+VoiceBell has NO internet permission. All your data stays on your device:
+• Voice recognition uses Vosk (offline speech recognition)
+• No Google Play Services required
+• Works on degoogled devices (GrapheneOS, LineageOS, etc.)
+• Fully open source (GPL-3.0)
+
+<b>Voice Commands:</b>
+
+Simply tap the microphone and say:
+• "Set alarm for 7 AM"
+• "Wake me at 6:30 AM on weekdays"
+• "Set timer for 10 minutes"
+• "What alarms are set?"
+
+All voice processing happens locally - your voice data never leaves your phone.
+
+<b>Alarm Features:</b>
+
+• Repeating alarms with weekday selection (Mon-Fri, weekends, custom)
+• Gradual volume increase for gentle wake-up
+• Pre-alarms with configurable intervals
+• Snooze with customizable duration
+• Multiple alarm tones
+• Per-alarm vibration and flash settings
+• Respects system alarm volume
+• Full-screen alarm interface
+
+<b>Perfect For:</b>
+
+• Privacy-conscious users
+• Users of degoogled Android devices
+• Anyone who wants an alarm clock that just works
+• People who value open source software
+• Deep sleepers who need multiple alarms
+
+<b>Open Source:</b>
+
+VoiceBell is fully open source under GPL-3.0. Verify our privacy claims by reviewing the code on GitHub.
+
+Made with privacy and respect for users.

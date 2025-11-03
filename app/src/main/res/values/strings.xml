@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceBell</string>
+
+    <!-- Tab Navigation -->
+    <string name="tab_alarm">Alarm</string>
+    <string name="tab_timer">Timer</string>
+    <string name="tab_stopwatch">Stopwatch</string>
+    <string name="tab_world_clock">World Clock</string>
+
+    <!-- Common Actions -->
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_done">Done</string>
+    <string name="action_edit">Edit</string>
+
+    <!-- Voice Commands -->
+    <string name="voice_button_description">Tap to give voice command</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_processing">Processing…</string>
+    <string name="voice_error">Could not understand. Please try again.</string>
+
+    <!-- Alarm -->
+    <string name="alarm_set">Alarm set</string>
+    <string name="alarm_deleted">Alarm deleted</string>
+    <string name="alarm_label">Label</string>
+    <string name="alarm_time">Time</string>
+    <string name="alarm_repeat">Repeat</string>
+    <string name="alarm_tone">Alarm tone</string>
+    <string name="alarm_vibrate">Vibrate</string>
+    <string name="alarm_flash">Flash</string>
+    <string name="alarm_gradual_volume">Gradual volume increase</string>
+    <string name="alarm_snooze">Snooze</string>
+    <string name="alarm_snooze_duration">Snooze duration</string>
+    <string name="alarm_pre_alarms">Pre-alarms</string>
+    <string name="alarm_pre_alarm_count">Number of pre-alarms</string>
+    <string name="alarm_pre_alarm_interval">Pre-alarm interval (minutes)</string>
+
+    <!-- Days of Week -->
+    <string name="day_monday">Monday</string>
+    <string name="day_tuesday">Tuesday</string>
+    <string name="day_wednesday">Wednesday</string>
+    <string name="day_thursday">Thursday</string>
+    <string name="day_friday">Friday</string>
+    <string name="day_saturday">Saturday</string>
+    <string name="day_sunday">Sunday</string>
+    <string name="day_monday_short">Mon</string>
+    <string name="day_tuesday_short">Tue</string>
+    <string name="day_wednesday_short">Wed</string>
+    <string name="day_thursday_short">Thu</string>
+    <string name="day_friday_short">Fri</string>
+    <string name="day_saturday_short">Sat</string>
+    <string name="day_sunday_short">Sun</string>
+
+    <!-- Timer -->
+    <string name="timer_start">Start</string>
+    <string name="timer_pause">Pause</string>
+    <string name="timer_resume">Resume</string>
+    <string name="timer_stop">Stop</string>
+    <string name="timer_reset">Reset</string>
+    <string name="timer_finished">Timer finished</string>
+
+    <!-- Stopwatch -->
+    <string name="stopwatch_lap">Lap</string>
+    <string name="stopwatch_laps">Laps</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_voice">Voice Commands</string>
+    <string name="settings_voice_enabled">Enable voice commands</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_licenses">Open source licenses</string>
+
+    <!-- Permissions -->
+    <string name="permission_microphone_rationale">Microphone access is needed for voice commands to set alarms and timers.</string>
+    <string name="permission_notification_rationale">Notification permission is required to show alarm and timer notifications.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_alarm">Alarms</string>
+    <string name="notification_channel_timer">Timers</string>
+    <string name="notification_channel_stopwatch">Stopwatch</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_delete_alarm">Delete alarm</string>
+    <string name="cd_toggle_alarm">Toggle alarm on/off</string>
+    <string name="cd_voice_input">Voice input</string>
+</resources>

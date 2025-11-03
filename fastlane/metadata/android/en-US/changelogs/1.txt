@@ -1,0 +1,9 @@
+Initial release of VoiceBell
+
+• Alarm creation with repeating schedules
+• Offline voice command support (English)
+• Timer and stopwatch functionality
+• World clock support
+• Material Design 3 interface
+• 100% offline - no internet permission
+• GPL-3.0 open source license
