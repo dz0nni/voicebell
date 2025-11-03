@@ -75,10 +75,10 @@ android {
     // Temporarily exclude Vosk-dependent files until Vosk library is available
     sourceSets {
         getByName("main") {
-            java.exclude(
-                "**/service/VoiceRecognitionService.kt",
-                "**/screens/voice/**"
-            )
+            java {
+                exclude("**/service/VoiceRecognitionService.kt")
+                exclude("**/presentation/screens/voice/**")
+            }
         }
     }
 }
