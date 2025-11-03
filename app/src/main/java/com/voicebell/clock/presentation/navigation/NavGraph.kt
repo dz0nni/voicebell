@@ -20,7 +20,7 @@ import com.voicebell.clock.presentation.screens.alarm.edit.AlarmEditScreen
 import com.voicebell.clock.presentation.screens.home.MainScreen
 import com.voicebell.clock.presentation.screens.settings.SettingsScreen
 import com.voicebell.clock.presentation.screens.timer.TimerScreen
-import com.voicebell.clock.presentation.screens.voice.VoiceCommandScreen
+// import com.voicebell.clock.presentation.screens.voice.VoiceCommandScreen // Temporarily disabled
 import com.voicebell.clock.presentation.screens.worldclock.WorldClocksScreen
 import com.voicebell.clock.presentation.stopwatch.StopwatchScreen
 
@@ -69,7 +69,8 @@ fun NavGraph(
                     navController.navigate(Routes.Timer.route)
                 },
                 onVoiceCommand = {
-                    navController.navigate(Routes.VoiceCommand.route)
+                    // Voice command temporarily disabled until Vosk library is available
+                    // navController.navigate(Routes.VoiceCommand.route)
                 }
             )
         }
@@ -137,7 +138,8 @@ fun NavGraph(
             )
         }
 
-        // Voice Command screen
+        // Voice Command screen - Temporarily disabled until Vosk library is available
+        /*
         composable(Routes.VoiceCommand.route) {
             VoiceCommandScreen(
                 onNavigateBack = {
@@ -151,5 +153,6 @@ fun NavGraph(
                 }
             )
         }
+        */
     }
 }

@@ -71,6 +71,16 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Temporarily exclude Vosk-dependent files until Vosk library is available
+    sourceSets {
+        getByName("main") {
+            java.exclude(
+                "**/service/VoiceRecognitionService.kt",
+                "**/screens/voice/**"
+            )
+        }
+    }
 }
 
 dependencies {
@@ -112,8 +122,10 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Voice Recognition - Vosk (Offline)
-    implementation("net.java.dev.jna:jna:5.13.0@aar")
-    implementation("org.vosk:vosk-android:0.3.45")
+    // NOTE: Vosk temporarily disabled for MVP build due to repository availability
+    // Voice recognition feature will be non-functional until Vosk is added back
+    // implementation("net.java.dev.jna:jna:5.13.0@aar")
+    // implementation("org.vosk:vosk-android:0.3.45")
 
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
