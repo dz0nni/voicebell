@@ -29,6 +29,7 @@ fun AlarmScreen(
     onNavigateToCreateAlarm: () -> Unit,
     onNavigateToEditAlarm: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
+    showTopBar: Boolean = true,
     viewModel: AlarmViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -72,27 +73,31 @@ fun AlarmScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Alarms",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.onEvent(AlarmEvent.OpenSettings) }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
+        topBar = if (showTopBar) {
+            {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Alarms",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.onEvent(AlarmEvent.OpenSettings) }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+            }
+        } else {
+            {}
         },
         floatingActionButton = {
             FloatingActionButton(

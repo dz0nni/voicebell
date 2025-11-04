@@ -127,7 +127,8 @@ fun ClassicHomeScreen(
                     AlarmScreen(
                         onNavigateToCreateAlarm = onNavigateToCreateAlarm,
                         onNavigateToEditAlarm = onNavigateToEditAlarm,
-                        onNavigateToSettings = {} // Hide settings button, already in top bar
+                        onNavigateToSettings = {},
+                        showTopBar = false // Hide top bar, ClassicHomeScreen already has one
                     )
                 }
                 1 -> {
@@ -137,7 +138,8 @@ fun ClassicHomeScreen(
                 }
                 2 -> {
                     TimerScreen(
-                        onNavigateToSettings = {} // Hide settings button, already in top bar
+                        onNavigateToSettings = {},
+                        showTopBar = false // Hide top bar, ClassicHomeScreen already has one
                     )
                 }
                 3 -> {

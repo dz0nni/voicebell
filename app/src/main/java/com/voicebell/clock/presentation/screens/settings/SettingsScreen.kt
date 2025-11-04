@@ -19,6 +19,7 @@ import com.voicebell.clock.domain.model.UiMode
 import com.voicebell.clock.util.PermissionsHelper
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
+import com.voicebell.clock.BuildConfig
 
 /**
  * Settings screen for app preferences including UI mode switcher.
@@ -239,7 +240,7 @@ fun SettingsScreen(
             item {
                 SettingsItem(
                     title = "Version",
-                    subtitle = "1.0.0",
+                    subtitle = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                     onClick = { }
                 )
             }
