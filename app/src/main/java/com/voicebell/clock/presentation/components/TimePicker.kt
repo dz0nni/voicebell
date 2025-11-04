@@ -1,5 +1,6 @@
 package com.voicebell.clock.presentation.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -63,6 +64,7 @@ fun TimePicker(
 /**
  * Scrollable number picker for selecting a value from a range
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NumberPicker(
     value: Int,
