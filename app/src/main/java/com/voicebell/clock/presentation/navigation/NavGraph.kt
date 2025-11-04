@@ -78,11 +78,14 @@ fun NavGraph(
         // Alarms list screen
         composable(Routes.Alarms.route) {
             AlarmScreen(
-                onNavigateToEdit = { alarmId ->
+                onNavigateToCreateAlarm = {
+                    navController.navigate(Routes.AlarmEdit.createRoute(0L))
+                },
+                onNavigateToEditAlarm = { alarmId ->
                     navController.navigate(Routes.AlarmEdit.createRoute(alarmId))
                 },
-                onNavigateBack = {
-                    navController.popBackStack()
+                onNavigateToSettings = {
+                    navController.navigate(Routes.Settings.route)
                 }
             )
         }
@@ -107,8 +110,8 @@ fun NavGraph(
         // Timer screen
         composable(Routes.Timer.route) {
             TimerScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
+                onNavigateToSettings = {
+                    navController.navigate(Routes.Settings.route)
                 }
             )
         }

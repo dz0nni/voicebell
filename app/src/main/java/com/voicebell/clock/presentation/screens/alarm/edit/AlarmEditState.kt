@@ -1,7 +1,7 @@
 package com.voicebell.clock.presentation.screens.alarm.edit
 
 import com.voicebell.clock.domain.model.AlarmTone
-import java.time.DayOfWeek
+import com.voicebell.clock.domain.model.DayOfWeek
 import java.time.LocalTime
 
 /**

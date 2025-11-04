@@ -135,10 +135,9 @@ fun ClassicHomeScreen(
             when (selectedTab) {
                 0 -> {
                     AlarmScreen(
-                        onNavigateToEdit = { alarmId ->
-                            // Navigate handled by parent
-                        },
-                        onNavigateBack = { /* No back from home */ }
+                        onNavigateToCreateAlarm = onNavigateToCreateAlarm,
+                        onNavigateToEditAlarm = onNavigateToEditAlarm,
+                        onNavigateToSettings = onNavigateToSettings
                     )
                 }
                 1 -> {
@@ -148,7 +147,7 @@ fun ClassicHomeScreen(
                 }
                 2 -> {
                     TimerScreen(
-                        onNavigateBack = { /* No back from home */ }
+                        onNavigateToSettings = onNavigateToSettings
                     )
                 }
                 3 -> {

@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voicebell.clock.domain.model.Alarm
-import java.time.DayOfWeek
+import com.voicebell.clock.domain.model.DayOfWeek
 
 /**
  * Material Design 3 card component for displaying an alarm.
@@ -275,39 +275,21 @@ private fun getRepeatDaysText(repeatDays: Set<DayOfWeek>): String {
     }
 
     // Check for every day
-    if (repeatDays.size == 7) {
+    if (repeatDays == DayOfWeek.ALL_DAYS) {
         return "Every day"
     }
 
     // Check for weekdays
-    val weekdays = setOf(
-        DayOfWeek.MONDAY,
-        DayOfWeek.TUESDAY,
-        DayOfWeek.WEDNESDAY,
-        DayOfWeek.THURSDAY,
-        DayOfWeek.FRIDAY
-    )
-    if (repeatDays == weekdays) {
+    if (repeatDays == DayOfWeek.WEEKDAYS) {
         return "Weekdays"
     }
 
     // Check for weekends
-    val weekends = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
-    if (repeatDays == weekends) {
+    if (repeatDays == DayOfWeek.WEEKENDS) {
         return "Weekends"
     }
 
     // Display abbreviated day names
-    val sortedDays = repeatDays.sortedBy { it.value }
-    return sortedDays.joinToString(", ") { day ->
-        when (day) {
-            DayOfWeek.MONDAY -> "Mon"
-            DayOfWeek.TUESDAY -> "Tue"
-            DayOfWeek.WEDNESDAY -> "Wed"
-            DayOfWeek.THURSDAY -> "Thu"
-            DayOfWeek.FRIDAY -> "Fri"
-            DayOfWeek.SATURDAY -> "Sat"
-            DayOfWeek.SUNDAY -> "Sun"
-        }
-    }
+    return repeatDays.sortedBy { it.value }
+        .joinToString(", ") { it.shortName }
 }
