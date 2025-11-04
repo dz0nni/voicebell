@@ -59,7 +59,7 @@ class AlarmEditViewModel @Inject constructor(
     private fun loadAlarm(alarmId: Long) {
         viewModelScope.launch {
             try {
-                val alarm = getAlarmByIdUseCase(alarmId)
+                val alarm = getAlarmByIdUseCase.getOnce(alarmId)
                 if (alarm != null) {
                     _state.update {
                         it.copy(
