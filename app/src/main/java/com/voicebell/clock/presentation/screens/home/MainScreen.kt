@@ -36,6 +36,8 @@ fun MainScreen(
                 onNavigateToTimer = onNavigateToTimer,
                 onNavigateToStopwatch = onNavigateToStopwatch,
                 onNavigateToSettings = onNavigateToSettings,
+                onNavigateToCreateAlarm = onNavigateToCreateAlarm,
+                onNavigateToEditAlarm = onNavigateToEditAlarm,
                 modifier = modifier
             )
         }

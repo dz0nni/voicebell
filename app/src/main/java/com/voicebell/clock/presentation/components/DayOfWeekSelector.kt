@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.time.DayOfWeek
+import com.voicebell.clock.domain.model.DayOfWeek
 
 /**
  * Component for selecting days of the week.
@@ -54,15 +54,7 @@ private fun DayChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val label = when (day) {
-        DayOfWeek.MONDAY -> "M"
-        DayOfWeek.TUESDAY -> "T"
-        DayOfWeek.WEDNESDAY -> "W"
-        DayOfWeek.THURSDAY -> "T"
-        DayOfWeek.FRIDAY -> "F"
-        DayOfWeek.SATURDAY -> "S"
-        DayOfWeek.SUNDAY -> "S"
-    }
+    val label = day.shortName.first().toString()
 
     FilterChip(
         selected = isSelected,
@@ -93,28 +85,12 @@ fun SelectedDaysText(
 ) {
     val text = when {
         selectedDays.isEmpty() -> "One time"
-        selectedDays.size == 7 -> "Every day"
-        selectedDays == setOf(
-            DayOfWeek.MONDAY,
-            DayOfWeek.TUESDAY,
-            DayOfWeek.WEDNESDAY,
-            DayOfWeek.THURSDAY,
-            DayOfWeek.FRIDAY
-        ) -> "Weekdays"
-        selectedDays == setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY) -> "Weekends"
+        selectedDays == DayOfWeek.ALL_DAYS -> "Every day"
+        selectedDays == DayOfWeek.WEEKDAYS -> "Weekdays"
+        selectedDays == DayOfWeek.WEEKENDS -> "Weekends"
         else -> {
             val sortedDays = selectedDays.sortedBy { it.value }
-            sortedDays.joinToString(", ") { day ->
-                when (day) {
-                    DayOfWeek.MONDAY -> "Mon"
-                    DayOfWeek.TUESDAY -> "Tue"
-                    DayOfWeek.WEDNESDAY -> "Wed"
-                    DayOfWeek.THURSDAY -> "Thu"
-                    DayOfWeek.FRIDAY -> "Fri"
-                    DayOfWeek.SATURDAY -> "Sat"
-                    DayOfWeek.SUNDAY -> "Sun"
-                }
-            }
+            sortedDays.joinToString(", ") { it.shortName }
         }
     }
 

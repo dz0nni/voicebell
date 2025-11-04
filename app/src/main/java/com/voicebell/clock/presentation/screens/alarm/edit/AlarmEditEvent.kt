@@ -1,6 +1,6 @@
 package com.voicebell.clock.presentation.screens.alarm.edit
 
-import java.time.DayOfWeek
+import com.voicebell.clock.domain.model.DayOfWeek
 
 /**
  * User events for alarm edit/create screen

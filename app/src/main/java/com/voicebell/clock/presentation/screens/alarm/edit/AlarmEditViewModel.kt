@@ -186,35 +186,42 @@ class AlarmEditViewModel @Inject constructor(
                     preAlarmInterval = currentState.preAlarmInterval
                 )
 
-                val result = if (currentState.isEditMode) {
+                if (currentState.isEditMode) {
+                    // Update existing alarm
                     updateAlarmUseCase(alarm)
+                        .onSuccess {
+                            scheduleAlarmUseCase(alarm)
+                            _effects.send(AlarmEditEffect.ShowSuccess("Alarm saved"))
+                            _effects.send(AlarmEditEffect.NavigateBack)
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Error updating alarm", error)
+                            _state.update {
+                                it.copy(
+                                    isSaving = false,
+                                    errorMessage = "Failed to save alarm: ${error.message}"
+                                )
+                            }
+                        }
                 } else {
+                    // Create new alarm
                     createAlarmUseCase(alarm)
+                        .onSuccess { alarmId ->
+                            val savedAlarm = alarm.copy(id = alarmId)
+                            scheduleAlarmUseCase(savedAlarm)
+                            _effects.send(AlarmEditEffect.ShowSuccess("Alarm saved"))
+                            _effects.send(AlarmEditEffect.NavigateBack)
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Error creating alarm", error)
+                            _state.update {
+                                it.copy(
+                                    isSaving = false,
+                                    errorMessage = "Failed to save alarm: ${error.message}"
+                                )
+                            }
+                        }
                 }
-
-                result
-                    .onSuccess { alarmId ->
-                        // Schedule the alarm
-                        val savedAlarm = if (currentState.isEditMode) {
-                            alarm
-                        } else {
-                            alarm.copy(id = alarmId)
-                        }
-                        scheduleAlarmUseCase(savedAlarm)
-
-                        // Navigate back with success
-                        _effects.send(AlarmEditEffect.ShowSuccess("Alarm saved"))
-                        _effects.send(AlarmEditEffect.NavigateBack)
-                    }
-                    .onFailure { error ->
-                        Log.e(TAG, "Error saving alarm", error)
-                        _state.update {
-                            it.copy(
-                                isSaving = false,
-                                errorMessage = "Failed to save alarm: ${error.message}"
-                            )
-                        }
-                    }
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving alarm", e)
                 _state.update {

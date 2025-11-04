@@ -30,6 +30,8 @@ fun ClassicHomeScreen(
     onNavigateToTimer: () -> Unit,
     onNavigateToStopwatch: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToCreateAlarm: () -> Unit,
+    onNavigateToEditAlarm: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(0) }
