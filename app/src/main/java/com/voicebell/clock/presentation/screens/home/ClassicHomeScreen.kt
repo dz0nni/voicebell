@@ -43,7 +43,7 @@ fun ClassicHomeScreen(
                     Text(
                         text = when (selectedTab) {
                             0 -> "Alarms"
-                            1 -> "Clock"
+                            1 -> "World Clocks"
                             2 -> "Timer"
                             3 -> "Stopwatch"
                             else -> "VoiceBell"
@@ -76,10 +76,7 @@ fun ClassicHomeScreen(
                     },
                     label = { Text("Alarm") },
                     selected = selectedTab == 0,
-                    onClick = {
-                        selectedTab = 0
-                        onNavigateToAlarms()
-                    }
+                    onClick = { selectedTab = 0 }
                 )
 
                 NavigationBarItem(
@@ -91,10 +88,7 @@ fun ClassicHomeScreen(
                     },
                     label = { Text("Clock") },
                     selected = selectedTab == 1,
-                    onClick = {
-                        selectedTab = 1
-                        onNavigateToWorldClocks()
-                    }
+                    onClick = { selectedTab = 1 }
                 )
 
                 NavigationBarItem(
@@ -106,10 +100,7 @@ fun ClassicHomeScreen(
                     },
                     label = { Text("Timer") },
                     selected = selectedTab == 2,
-                    onClick = {
-                        selectedTab = 2
-                        onNavigateToTimer()
-                    }
+                    onClick = { selectedTab = 2 }
                 )
 
                 NavigationBarItem(
@@ -121,10 +112,7 @@ fun ClassicHomeScreen(
                     },
                     label = { Text("Stopwatch") },
                     selected = selectedTab == 3,
-                    onClick = {
-                        selectedTab = 3
-                        onNavigateToStopwatch()
-                    }
+                    onClick = { selectedTab = 3 }
                 )
             }
         }
@@ -139,17 +127,17 @@ fun ClassicHomeScreen(
                     AlarmScreen(
                         onNavigateToCreateAlarm = onNavigateToCreateAlarm,
                         onNavigateToEditAlarm = onNavigateToEditAlarm,
-                        onNavigateToSettings = onNavigateToSettings
+                        onNavigateToSettings = {} // Hide settings button, already in top bar
                     )
                 }
                 1 -> {
                     WorldClocksScreen(
-                        onNavigateBack = { /* No back from home */ }
+                        onNavigateBack = {} // No back navigation in classic mode
                     )
                 }
                 2 -> {
                     TimerScreen(
-                        onNavigateToSettings = onNavigateToSettings
+                        onNavigateToSettings = {} // Hide settings button, already in top bar
                     )
                 }
                 3 -> {

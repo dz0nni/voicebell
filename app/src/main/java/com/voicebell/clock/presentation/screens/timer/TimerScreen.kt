@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.voicebell.clock.domain.model.Timer
+import kotlinx.coroutines.delay
 
 /**
  * Timer screen with input, active timer display, and recent timers
@@ -30,6 +31,17 @@ fun TimerScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Force recomposition every second when timer is running
+    var tickerState by remember { mutableStateOf(0L) }
+    LaunchedEffect(state.activeTimer?.isRunning) {
+        if (state.activeTimer?.isRunning == true && state.activeTimer?.isPaused == false) {
+            while (true) {
+                delay(1000)
+                tickerState = System.currentTimeMillis()
+            }
+        }
+    }
 
     // Show error messages
     LaunchedEffect(state.errorMessage) {
@@ -384,8 +396,14 @@ private fun RecentTimerCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                // Show original duration for finished timers, current remaining for active timers
+                val displayTime = if (timer.isFinished) {
+                    formatDuration(timer.durationMillis)
+                } else {
+                    timer.getFormattedTime()
+                }
                 Text(
-                    text = timer.getFormattedTime(),
+                    text = displayTime,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -425,5 +443,20 @@ private fun RecentTimerCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Format duration in milliseconds to HH:MM:SS or MM:SS
+ */
+private fun formatDuration(millis: Long): String {
+    val seconds = (millis / 1000) % 60
+    val minutes = (millis / 60000) % 60
+    val hours = millis / 3600000
+
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
     }
 }
