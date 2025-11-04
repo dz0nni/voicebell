@@ -74,10 +74,10 @@ VoiceBell follows Semantic Versioning (MAJOR.MINOR.PATCH):
 
 Found a bug or have a feature request?
 
-- **Bugs**: [GitHub Issues](https://github.com/yourusername/voicebell/issues)
-- **Features**: [GitHub Discussions](https://github.com/yourusername/voicebell/discussions)
+- **Bugs**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
+- **Features**: [GitHub Discussions](https://github.com/dz0nni/voicebell/discussions)
 
 ---
 
-[Unreleased]: https://github.com/yourusername/voicebell/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/yourusername/voicebell/releases/tag/v0.1.0
+[Unreleased]: https://github.com/dz0nni/voicebell/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dz0nni/voicebell/releases/tag/v0.1.0

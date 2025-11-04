@@ -164,10 +164,10 @@ Categories:
 License: GPL-3.0-or-later
 AuthorName: Your Name
 AuthorEmail: your.email@example.com
-WebSite: https://github.com/yourusername/voicebell
-SourceCode: https://github.com/yourusername/voicebell
-IssueTracker: https://github.com/yourusername/voicebell/issues
-Changelog: https://github.com/yourusername/voicebell/blob/main/CHANGELOG.md
+WebSite: https://github.com/dz0nni/voicebell
+SourceCode: https://github.com/dz0nni/voicebell
+IssueTracker: https://github.com/dz0nni/voicebell/issues
+Changelog: https://github.com/dz0nni/voicebell/blob/main/CHANGELOG.md
 
 AutoName: VoiceBell
 Summary: Privacy-focused offline alarm clock with voice commands
@@ -192,7 +192,7 @@ Description: |-
   Voice commands work completely offline - no data is sent to any server.
 
 RepoType: git
-Repo: https://github.com/yourusername/voicebell.git
+Repo: https://github.com/dz0nni/voicebell.git
 
 Builds:
   - versionName: 1.0.0
@@ -336,7 +336,7 @@ git push origin add-voicebell
 ## App Information
 - Package: com.voicebell.clock
 - License: GPL-3.0-or-later
-- Website: https://github.com/yourusername/voicebell
+- Website: https://github.com/dz0nni/voicebell
 
 ## Description
 VoiceBell is a privacy-focused alarm clock with offline voice recognition.

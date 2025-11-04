@@ -261,7 +261,7 @@ VoiceBell is fully open source under GPL-3.0:
 - **Community review**: Anyone can verify privacy claims
 - **No proprietary SDKs**: Only open-source dependencies
 
-**Verify our privacy claims**: Read the source code at [github.com/yourusername/voicebell](https://github.com/yourusername/voicebell)
+**Verify our privacy claims**: Read the source code at [github.com/dz0nni/voicebell](https://github.com/dz0nni/voicebell)
 
 ## Legal Basis (GDPR)
 
@@ -293,8 +293,8 @@ For California residents:
 If you have questions about this Privacy Policy or VoiceBell's privacy practices:
 
 - **Email**: [your-email@example.com]
-- **GitHub Issues**: [github.com/yourusername/voicebell/issues](https://github.com/yourusername/voicebell/issues)
-- **GitHub Discussions**: [github.com/yourusername/voicebell/discussions](https://github.com/yourusername/voicebell/discussions)
+- **GitHub Issues**: [github.com/dz0nni/voicebell/issues](https://github.com/dz0nni/voicebell/issues)
+- **GitHub Discussions**: [github.com/dz0nni/voicebell/discussions](https://github.com/dz0nni/voicebell/discussions)
 
 ### Data Requests
 

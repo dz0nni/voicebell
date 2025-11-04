@@ -341,8 +341,8 @@ The Vosk speech recognition model runs entirely on your Android device using the
 
 Having trouble with a specific command? Help us improve!
 
-- Report issues: [GitHub Issues](https://github.com/yourusername/voicebell/issues)
-- Suggest new commands: [GitHub Discussions](https://github.com/yourusername/voicebell/discussions)
+- Report issues: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
+- Suggest new commands: [GitHub Discussions](https://github.com/dz0nni/voicebell/discussions)
 
 ---
 

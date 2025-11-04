@@ -48,7 +48,7 @@ Instead, report privately via:
    - Include: Detailed description, steps to reproduce, impact assessment
 
 2. **GitHub Security Advisory** (Preferred):
-   - Go to: https://github.com/yourusername/voicebell/security/advisories
+   - Go to: https://github.com/dz0nni/voicebell/security/advisories
    - Click "Report a vulnerability"
    - Fill in the advisory form
 
@@ -225,7 +225,7 @@ However, we deeply appreciate security research and will:
 
 **Security issues**: [your-security-email@example.com]
 
-**General questions**: [GitHub Issues](https://github.com/yourusername/voicebell/issues)
+**General questions**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
 
 **PGP Key**: [Optional: Include PGP key fingerprint]
 

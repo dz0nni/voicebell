@@ -480,8 +480,8 @@ For features requiring manual testing:
 
 ## Questions?
 
-- **General questions**: [GitHub Discussions](https://github.com/yourusername/voicebell/discussions)
-- **Technical support**: [GitHub Issues](https://github.com/yourusername/voicebell/issues)
+- **General questions**: [GitHub Discussions](https://github.com/dz0nni/voicebell/discussions)
+- **Technical support**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
 
 ---
 

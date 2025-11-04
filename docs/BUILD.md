@@ -53,7 +53,7 @@ This document provides detailed instructions for building VoiceBell from source.
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/voicebell.git
+git clone https://github.com/dz0nni/voicebell.git
 cd voicebell
 ```
 
@@ -512,4 +512,4 @@ See [F-DROID.md](F-DROID.md) for submission details.
 
 ---
 
-**Questions?** Open an issue on [GitHub](https://github.com/yourusername/voicebell/issues)
+**Questions?** Open an issue on [GitHub](https://github.com/dz0nni/voicebell/issues)
