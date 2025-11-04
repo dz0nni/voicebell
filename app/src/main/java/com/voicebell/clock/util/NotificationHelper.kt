@@ -127,10 +127,4 @@ class NotificationHelper @Inject constructor(
         }
     }
 
-    /**
-     * Get NotificationManager.
-     */
-    fun getNotificationManager(): NotificationManager {
-        return notificationManager
-    }
 }
