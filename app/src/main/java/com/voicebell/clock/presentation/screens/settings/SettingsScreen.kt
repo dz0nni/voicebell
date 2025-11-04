@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,11 +27,16 @@ import androidx.compose.material.icons.filled.Warning
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
-    permissionsHelper: PermissionsHelper = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showUiModeDialog by remember { mutableStateOf(false) }
+
+    // Get PermissionsHelper from context
+    val context = LocalContext.current
+    val permissionsHelper = remember {
+        PermissionsHelper(context)
+    }
 
     // Check permissions on each recomposition to show current status
     val permissionStatus = remember { permissionsHelper.getPermissionStatus() }
