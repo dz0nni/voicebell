@@ -1,5 +1,7 @@
 package com.voicebell.clock.presentation.screens.timer
 
+import com.voicebell.clock.domain.model.Timer
+
 /**
  * User events for Timer screen
  */

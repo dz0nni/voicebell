@@ -124,7 +124,7 @@ class AlarmService : Service() {
                         gradualVolume = alarm.gradualVolumeIncrease,
                         shouldVibrate = alarm.vibrate,
                         volumeLevel = alarm.volumeLevel,
-                        shouldFlash = alarm.useFlash
+                        shouldFlash = alarm.flash
                     )
                 } else {
                     Log.e(TAG, "Alarm not found: $alarmId")
