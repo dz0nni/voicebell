@@ -45,18 +45,7 @@ jobs:
           mv app/build/outputs/apk/release/app-release-unsigned.apk \
              app/build/outputs/apk/release/VoiceBell-${{ steps.version.outputs.VERSION_NAME }}-release-unsigned.apk || true
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            app/build/outputs/apk/debug/VoiceBell-*.apk
-            app/build/outputs/apk/release/VoiceBell-*.apk
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      # Upload artifacts first (before release creation)
       - name: Upload Debug APK as Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -69,3 +58,17 @@ jobs:
           name: VoiceBell-release-apk
           path: app/build/outputs/apk/release/VoiceBell-*.apk
         continue-on-error: true
+
+      # Try to create release (may fail due to API limits)
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        with:
+          files: |
+            app/build/outputs/apk/debug/VoiceBell-*.apk
+            app/build/outputs/apk/release/VoiceBell-*.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
