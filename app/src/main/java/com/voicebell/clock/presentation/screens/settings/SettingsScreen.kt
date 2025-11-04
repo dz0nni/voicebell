@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.voicebell.clock.domain.model.UiMode
+import com.voicebell.clock.util.PermissionsHelper
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
 
 /**
  * Settings screen for app preferences including UI mode switcher.
@@ -23,10 +26,14 @@ import com.voicebell.clock.domain.model.UiMode
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    permissionsHelper: PermissionsHelper = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showUiModeDialog by remember { mutableStateOf(false) }
+
+    // Check permissions on each recomposition to show current status
+    val permissionStatus = remember { permissionsHelper.getPermissionStatus() }
 
     Scaffold(
         topBar = {
@@ -104,6 +111,86 @@ fun SettingsScreen(
                     subtitle = "Use 24-hour time format",
                     checked = state.settings.use24HourFormat,
                     onCheckedChange = { viewModel.toggle24HourFormat() }
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(horizontal = 16.dp))
+            }
+
+            // Permissions Section
+            item {
+                SettingsSectionHeader(title = "Permissions")
+            }
+
+            // Warning card if not all permissions granted
+            if (!permissionStatus.criticalGranted) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = "Some critical permissions are missing. Alarms and timers may not work reliably.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Notifications permission
+            item {
+                PermissionItem(
+                    title = "Notifications",
+                    subtitle = "Required for alarm and timer alerts",
+                    isGranted = permissionStatus.notificationsEnabled,
+                    onClick = { permissionsHelper.openNotificationSettings() }
+                )
+            }
+
+            // Exact alarms permission
+            item {
+                PermissionItem(
+                    title = "Schedule Exact Alarms",
+                    subtitle = "Required for precise alarm timing",
+                    isGranted = permissionStatus.canScheduleExactAlarms,
+                    onClick = { permissionsHelper.openAlarmSettings() }
+                )
+            }
+
+            // Full-screen intent permission
+            item {
+                PermissionItem(
+                    title = "Full-Screen Notifications",
+                    subtitle = "Show alarms when phone is locked",
+                    isGranted = permissionStatus.canUseFullScreenIntent,
+                    onClick = { permissionsHelper.openNotificationSettings() }
+                )
+            }
+
+            // Battery optimization
+            item {
+                PermissionItem(
+                    title = "Battery Optimization",
+                    subtitle = "Disable for reliable background operation",
+                    isGranted = permissionStatus.batteryOptimizationDisabled,
+                    onClick = { permissionsHelper.openBatteryOptimizationSettings() }
                 )
             }
 
@@ -245,6 +332,48 @@ private fun SettingsSwitchItem(
                 onCheckedChange = onCheckedChange
             )
         }
+    )
+}
+
+/**
+ * Permission item showing status and action button
+ */
+@Composable
+private fun PermissionItem(
+    title: String,
+    subtitle: String,
+    isGranted: Boolean,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        leadingContent = {
+            Icon(
+                imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                contentDescription = if (isGranted) "Granted" else "Not granted",
+                tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+        },
+        trailingContent = {
+            if (!isGranted) {
+                OutlinedButton(onClick = onClick) {
+                    Text("Open Settings")
+                }
+            }
+        },
+        modifier = Modifier.clickable(enabled = !isGranted, onClick = onClick)
     )
 }
 

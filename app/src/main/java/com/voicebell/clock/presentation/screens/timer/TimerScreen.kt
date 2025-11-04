@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,13 +34,10 @@ fun TimerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Force recomposition every second when timer is running
-    var tickerState by remember { mutableStateOf(0L) }
-    LaunchedEffect(state.activeTimer?.isRunning) {
-        if (state.activeTimer?.isRunning == true && state.activeTimer?.isPaused == false) {
-            while (true) {
-                delay(1000)
-                tickerState = System.currentTimeMillis()
-            }
+    val currentTime by produceState(initialValue = System.currentTimeMillis(), state.activeTimer) {
+        while (state.activeTimer?.isRunning == true && state.activeTimer?.isPaused == false) {
+            delay(1000)
+            value = System.currentTimeMillis()
         }
     }
 
