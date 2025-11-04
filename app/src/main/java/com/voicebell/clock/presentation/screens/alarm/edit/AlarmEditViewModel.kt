@@ -48,7 +48,7 @@ class AlarmEditViewModel @Inject constructor(
     init {
         // Check if we're editing an existing alarm
         val alarmId = savedStateHandle.get<Long>(ARG_ALARM_ID)
-        if (alarmId != null && alarmId != -1L) {
+        if (alarmId != null && alarmId > 0L) {
             loadAlarm(alarmId)
         }
     }
