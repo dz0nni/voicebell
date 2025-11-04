@@ -55,12 +55,12 @@ See [VOICE_COMMANDS.md](VOICE_COMMANDS.md) for complete list.
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.voicebell.clock)
 
 ### GitHub Releases
-Download the latest APK from [Releases](https://github.com/yourusername/voicebell/releases)
+Download the latest APK from [Releases](https://github.com/dz0nni/voicebell/releases)
 
 ### Obtainium
 Add this repository URL to Obtainium for automatic updates:
 ```
-https://github.com/yourusername/voicebell
+https://github.com/dz0nni/voicebell
 ```
 
 ### Google Play
@@ -75,7 +75,7 @@ https://github.com/yourusername/voicebell
 ## Installation
 
 ### From APK
-1. Download the APK from [Releases](https://github.com/yourusername/voicebell/releases)
+1. Download the APK from [Releases](https://github.com/dz0nni/voicebell/releases)
 2. Enable "Install from Unknown Sources" in Android settings
 3. Open the APK file and install
 
@@ -83,7 +83,7 @@ https://github.com/yourusername/voicebell
 See [BUILD.md](docs/BUILD.md) for detailed build instructions.
 
 ```bash
-git clone https://github.com/yourusername/voicebell.git
+git clone https://github.com/dz0nni/voicebell.git
 cd voicebell
 ./gradlew assembleRelease
 ```
@@ -233,8 +233,8 @@ GNU General Public License for more details.
 
 ## Support
 
-- **Bug reports**: [GitHub Issues](https://github.com/yourusername/voicebell/issues)
-- **Feature requests**: [GitHub Discussions](https://github.com/yourusername/voicebell/discussions)
+- **Bug reports**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
+- **Feature requests**: [GitHub Discussions](https://github.com/dz0nni/voicebell/discussions)
 - **Security issues**: See [SECURITY.md](SECURITY.md)
 
 ## Roadmap
