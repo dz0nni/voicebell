@@ -1,5 +1,8 @@
 # VoiceBell
 
+> **⚠️ ACTIVE DEVELOPMENT WARNING**
+> This project is currently under intensive development. Many features described in this README are not yet fully functional or may not work as expected. The app is in early alpha stage and should be considered experimental. Use at your own risk.
+
 A privacy-focused, offline alarm clock for Android with voice command support.
 
 ## Features
