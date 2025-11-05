@@ -187,7 +187,7 @@ fun SettingsScreen(
                     title = "Full-Screen Notifications",
                     subtitle = "Show alarms when phone is locked",
                     isGranted = permissionStatus.canUseFullScreenIntent,
-                    onClick = { permissionsHelper.openNotificationSettings() }
+                    onClick = { permissionsHelper.openFullScreenIntentSettings() }
                 )
             }
 
