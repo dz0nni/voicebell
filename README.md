@@ -5,6 +5,12 @@
 
 A privacy-focused, offline alarm clock for Android with voice command support.
 
+## Try it Out
+
+Want to test the current alpha version? Download the latest APK:
+
+**[📥 Download Latest APK](https://github.com/dz0nni/voicebell/releases/latest)**
+
 ## Features
 
 ### Core Functionality
