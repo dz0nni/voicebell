@@ -95,30 +95,62 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
+     * Open full-screen intent settings (Android 14+)
+     * Opens the specific settings page for "Alarms & Reminders" notification category
+     */
+    fun openFullScreenIntentSettings() {
+        try {
+            val intent = Intent().apply {
+                when {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                        // Android 14+: Open notification settings and let user navigate to full-screen intent
+                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    else -> {
+                        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                }
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback to general app settings
+            openNotificationSettings()
+        }
+    }
+
+    /**
      * Open battery optimization settings
+     * Opens the correct settings page for user to disable battery optimization
      */
     fun openBatteryOptimizationSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                // Primary: Try to open app-specific battery settings page
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.parse("package:${context.packageName}")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
             } catch (e: Exception) {
-                // Fallback to general battery settings
+                // Fallback: Open general battery optimization list
                 try {
                     val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     context.startActivity(fallbackIntent)
                 } catch (e2: Exception) {
-                    // Last fallback - open app settings
-                    val appSettingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.parse("package:${context.packageName}")
+                    // Last resort: Open general settings
+                    val settingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
-                    context.startActivity(appSettingsIntent)
+                    context.startActivity(settingsIntent)
                 }
             }
         }
