@@ -6,6 +6,7 @@ import com.voicebell.clock.domain.model.UiMode
 import com.voicebell.clock.domain.repository.SettingsRepository
 import com.voicebell.clock.domain.usecase.settings.GetSettingsUseCase
 import com.voicebell.clock.domain.usecase.settings.UpdateUiModeUseCase
+import com.voicebell.clock.util.VoskModelManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val getSettingsUseCase: GetSettingsUseCase,
     private val updateUiModeUseCase: UpdateUiModeUseCase,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val voskModelManager: VoskModelManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -31,6 +33,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadSettings()
+        checkVoiceModelStatus()
     }
 
     private fun loadSettings() {
@@ -58,6 +61,47 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val newValue = !_state.value.settings.use24HourFormat
             settingsRepository.updateUse24HourFormat(newValue)
+        }
+    }
+
+    private fun checkVoiceModelStatus() {
+        _state.update {
+            it.copy(isVoiceModelDownloaded = voskModelManager.isModelDownloaded())
+        }
+    }
+
+    fun downloadVoiceModel() {
+        viewModelScope.launch {
+            _state.update { it.copy(isDownloadingModel = true, modelDownloadProgress = 0f) }
+
+            voskModelManager.downloadModel { progress ->
+                _state.update { it.copy(modelDownloadProgress = progress) }
+            }.onSuccess {
+                _state.update {
+                    it.copy(
+                        isVoiceModelDownloaded = true,
+                        isDownloadingModel = false,
+                        modelDownloadProgress = 1f
+                    )
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        isDownloadingModel = false,
+                        modelDownloadProgress = 0f
+                    )
+                }
+                // TODO: Show error to user
+            }
+        }
+    }
+
+    fun deleteVoiceModel() {
+        viewModelScope.launch {
+            val success = voskModelManager.deleteModel()
+            if (success) {
+                _state.update { it.copy(isVoiceModelDownloaded = false) }
+            }
         }
     }
 }

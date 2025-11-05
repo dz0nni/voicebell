@@ -141,10 +141,8 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Voice Recognition - Vosk (Offline)
-    // NOTE: Vosk temporarily disabled for MVP build due to repository availability
-    // Voice recognition feature will be non-functional until Vosk is added back
-    // implementation("net.java.dev.jna:jna:5.13.0@aar")
-    // implementation("org.vosk:vosk-android:0.3.45")
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    implementation("com.alphacephei:vosk-android:0.3.45")
 
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
