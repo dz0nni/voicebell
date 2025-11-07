@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Weather integration (optional, privacy-preserving)
 
 ## [0.1.6] - 2025-11-07 (Offline Vosk Model)
+## [0.1.7] - 2025-11-08 (Voice Recognition Fixed)
+
+### Fixed
+- ✅ **Voice recognition now works!** Added missing Vosk model to APK
+- ✅ Auto-extraction of Vosk model from assets on first use
+- ✅ Model now properly bundled using Git LFS (41MB)
+
+### Technical
+- Added Vosk model (vosk-model-small-en-us-0.15.zip) to assets
+- VoiceRecognitionService now automatically extracts model from assets
+- Using Git LFS for large file storage
+- APK size: ~84MB (includes offline voice model)
+
 
 ### Added
 - ✅ **Bundled Vosk model** - Voice recognition model now included in APK

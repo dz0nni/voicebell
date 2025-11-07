@@ -71,9 +71,11 @@ proguard/
 # Android Profiling
 *.hprof
 
-# Vosk models (too large for Git)
+# Vosk models (too large for Git - using Git LFS for bundled model)
 app/src/main/assets/models/*.zip
 app/src/main/assets/models/vosk-model-*/
+# Exception: bundled model is tracked with Git LFS
+!app/src/main/assets/vosk-model-small-en-us-0.15.zip
 
 # IntelliJ
 *.iws
@@ -129,6 +131,7 @@ tmp/
 *.nar
 *.ear
 *.zip
+!app/src/main/assets/vosk-model-small-en-us-0.15.zip
 *.tar.gz
 *.rar
 

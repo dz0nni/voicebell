@@ -49,6 +49,9 @@ class VoiceRecognitionService : Service() {
     @Inject
     lateinit var voiceCommandParser: VoiceCommandParser
 
+    @Inject
+    lateinit var voskModelManager: com.voicebell.clock.util.VoskModelManager
+
     private var audioRecord: AudioRecord? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var recordingJob: Job? = null
@@ -126,27 +129,39 @@ class VoiceRecognitionService : Service() {
 
     /**
      * Initialize Vosk model from internal storage.
+     * If model doesn't exist, extract it from assets first.
      */
     private fun initializeVoskModel() {
         serviceScope.launch {
             try {
-                val modelDir = File(filesDir, MODEL_DIR_NAME)
+                // Check if model is already extracted
+                if (!voskModelManager.isModelDownloaded()) {
+                    Log.i(TAG, "Model not found, extracting from assets...")
+                    val extractResult = voskModelManager.extractModelFromAssets()
 
-                if (!modelDir.exists()) {
-                    Log.e(TAG, "Vosk model not found at: ${modelDir.absolutePath}")
-                    broadcastResult(null, false, "Voice model not downloaded")
-                    return@launch
+                    if (extractResult.isFailure) {
+                        Log.e(TAG, "Failed to extract model from assets", extractResult.exceptionOrNull())
+                        broadcastResult(null, false, "Failed to load voice model from assets")
+                        return@launch
+                    }
+
+                    Log.i(TAG, "Model extracted successfully")
                 }
 
-                val initialized = voskWrapper.initModel(modelDir.absolutePath)
+                val modelPath = voskModelManager.getModelPath()
+                Log.d(TAG, "Initializing Vosk model from: $modelPath")
+
+                val initialized = voskWrapper.initModel(modelPath)
 
                 if (!initialized) {
                     Log.e(TAG, "Failed to initialize Vosk model")
                     broadcastResult(null, false, "Failed to load voice model")
+                } else {
+                    Log.i(TAG, "Vosk model initialized successfully")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error initializing Vosk model", e)
-                broadcastResult(null, false, "Error loading voice model")
+                broadcastResult(null, false, "Error loading voice model: ${e.message}")
             }
         }
     }
