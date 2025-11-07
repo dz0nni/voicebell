@@ -1,161 +1,161 @@
 # VoiceBell Obtainium Setup Guide
 
-VoiceBell toetab automaatset uuendamist läbi **Obtainium** rakenduse, mis laadib otse GitHubist APK-d.
+VoiceBell supports automatic updates through the **Obtainium** app, which downloads APKs directly from GitHub.
 
-## Mis on Obtainium?
+## What is Obtainium?
 
-Obtainium on avatud lähtekoodiga Android rakendus, mis võimaldab:
-- ✅ Installida ja uuendada rakendusi otse GitHubist
-- ✅ Väldid Google Play ja F-Droid vahendajaid
-- ✅ Saada uuendusi kohe kui need avaldatakse
-- ✅ Täielik privaatsus ja kontroll
+Obtainium is an open-source Android app that allows you to:
+- ✅ Install and update apps directly from GitHub
+- ✅ Avoid Google Play and F-Droid intermediaries
+- ✅ Get updates immediately when they're published
+- ✅ Complete privacy and control
 
-## Nõuded
+## Requirements
 
 - Android 10+ (API 29+)
-- Obtainium rakendus installitud
-- Internetiühendus (ainult allalaadimiseks)
+- Obtainium app installed
+- Internet connection (only for downloads)
 
-## 1. Installi Obtainium
+## 1. Install Obtainium
 
-### Variant A: F-Droid (Soovitatav)
-1. Ava F-Droid
-2. Otsi "Obtainium"
-3. Installi rakendus
+### Option A: F-Droid (Recommended)
+1. Open F-Droid
+2. Search for "Obtainium"
+3. Install the app
 
-### Variant B: GitHub
-1. Mine: https://github.com/ImranR98/Obtainium/releases
-2. Lae alla viimane `app-release.apk`
-3. Installi APK
+### Option B: GitHub
+1. Go to: https://github.com/ImranR98/Obtainium/releases
+2. Download the latest `app-release.apk`
+3. Install the APK
 
-## 2. Lisa VoiceBell Obtainiumisse
+## 2. Add VoiceBell to Obtainium
 
-### Automaatne Meetod (Soovitatav)
+### Automatic Method (Recommended)
 
-Klõpsa seda linki oma Android seadmes:
+Click this link on your Android device:
 
 ```
 obtainium://app/%7B%22id%22%3A%22com.voicebell.clock%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fdz0nni%2Fvoicebell%22%2C%22author%22%3A%22dz0nni%22%2C%22name%22%3A%22VoiceBell%22%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22dontSortReleasesList%5C%22%3Afalse%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnlyAssetRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22debug%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%7D
 ```
 
-**⚠️ Asenda `dz0nni` oma GitHub kasutajanimega!**
+**⚠️ Replace `dz0nni` with your GitHub username!**
 
-### Manuaalne Meetod
+### Manual Method
 
-1. **Ava Obtainium**
-2. **Vajuta (+) nuppu**
-3. **Täida järgmised väljad:**
+1. **Open Obtainium**
+2. **Tap the (+) button**
+3. **Fill in the following fields:**
 
-   | Väli | Väärtus |
-   |------|---------|
+   | Field | Value |
+   |-------|-------|
    | App Source URL | `https://github.com/dz0nni/voicebell` |
    | App Name | `VoiceBell` |
    | Author | `dz0nni` |
 
-4. **Ava "Additional Options":**
+4. **Open "Additional Options":**
    - ✅ Enable `Fallback to Older Releases`
    - ✅ Enable `Auto APK Filter By Architecture`
-   - APK Filter RegEx: `debug\.apk$` (ainult debug APK-d)
+   - APK Filter RegEx: `debug\.apk$` (debug APKs only)
 
-5. **Vajuta "Add"**
+5. **Tap "Add"**
 
-## 3. Installi VoiceBell
+## 3. Install VoiceBell
 
-1. **Obtainiumis leia VoiceBell**
-2. **Vajuta "Download"**
-3. **Vajuta "Install"**
-4. **Anna load:**
-   - Install Unknown Apps (esimesel korral)
-   - Microphone (voice commands jaoks)
+1. **In Obtainium, find VoiceBell**
+2. **Tap "Download"**
+3. **Tap "Install"**
+4. **Grant permissions:**
+   - Install Unknown Apps (first time only)
+   - Microphone (for voice commands)
    - Notifications (Android 13+)
 
-## 4. Automaatsed Uuendused
+## 4. Automatic Updates
 
-### Seadista Automaatsed Kontrollid
+### Configure Automatic Checks
 
 1. Obtainium → **Settings**
 2. Enable **"Background Updates"**
-3. Määra **"Update Check Interval"**: `Once a day` või `Every 12 hours`
-4. Enable **"Auto-download Updates"** (valikuline)
-5. Enable **"Auto-install Updates"** (valikuline)
+3. Set **"Update Check Interval"**: `Once a day` or `Every 12 hours`
+4. Enable **"Auto-download Updates"** (optional)
+5. Enable **"Auto-install Updates"** (optional)
 
-### Manuaalne Uuenduse Kontroll
+### Manual Update Check
 
-Obtainiumis:
-1. Leia VoiceBell
-2. Vajuta ↻ (refresh icon)
-3. Kui uuendus saadaval → vajuta "Download"
-4. Vajuta "Install"
+In Obtainium:
+1. Find VoiceBell
+2. Tap ↻ (refresh icon)
+3. If update available → tap "Download"
+4. Tap "Install"
 
-## Versioonid ja Release'id
+## Versions and Releases
 
-VoiceBell kasutab semantilist versioneerimist:
+VoiceBell uses semantic versioning:
 
 ```
 v<MAJOR>.<MINOR>.<PATCH>
 
-Näiteks:
-- v0.1.0 - MVP release (esimene avalik versioon)
-- v0.2.0 - Uued funktsioonid
+Examples:
+- v0.1.0 - MVP release (first public version)
+- v0.2.0 - New features
 - v0.2.1 - Bug fixes
 - v1.0.0 - Stable release
 ```
 
-### Release Tüübid
+### Release Types
 
-**Debug APK** (soovitatav testimiseks)
+**Debug APK** (recommended for testing)
 - Filename: `VoiceBell-X.X.X-debug.apk`
-- Sisaldab debug infot
-- Paindlikumad turvareeglid
-- Suurem failisuurus
+- Contains debug info
+- More flexible security rules
+- Larger file size
 
-**Release APK** (tulevikus)
+**Release APK** (future)
 - Filename: `VoiceBell-X.X.X-release.apk`
-- Optimeeritud (ProGuard)
-- Väiksem failisuurus
-- Vajalik signing (allkirjastamine)
+- Optimized (ProGuard)
+- Smaller file size
+- Requires signing
 
-## GitHub Release'ide Loomine
+## Creating GitHub Releases
 
-### Kui oled VoiceBelli arendaja:
+### If you're a VoiceBell developer:
 
-1. **Veendu, et kõik muudatused on committed:**
+1. **Ensure all changes are committed:**
    ```bash
    git add .
    git commit -m "Release v0.1.0"
    ```
 
-2. **Loo ja push tag:**
+2. **Create and push tag:**
    ```bash
    git tag v0.1.0
    git push origin v0.1.0
    ```
 
 3. **GitHub Actions:**
-   - Automaatselt kompileerib APK-d
-   - Loob GitHub Release'i
-   - Lisab APK-d release'i külge
-   - Võtab 5-10 minutit
+   - Automatically compiles APKs
+   - Creates GitHub Release
+   - Attaches APKs to release
+   - Takes 5-10 minutes
 
-4. **Kontrolli:**
-   - Mine: `https://github.com/dz0nni/voicebell/releases`
-   - Peaks näitama `v0.1.0` release'i koos APK-dega
+4. **Check:**
+   - Go to: `https://github.com/dz0nni/voicebell/releases`
+   - Should show `v0.1.0` release with APKs
 
-### Kui oled kasutaja:
+### If you're a user:
 
-- GitHub Actions teeb kõik automaatselt ✅
-- Obtainium tuvastab uue release'i automaatselt ✅
-- Sa saad notifikatiooni uue versiooni kohta ✅
+- GitHub Actions does everything automatically ✅
+- Obtainium detects new releases automatically ✅
+- You get notifications about new versions ✅
 
 ## Troubleshooting
 
 ### ❌ "No releases found"
 
-**Probleem:** GitHub repositooryl pole ühtegi release'i
+**Problem:** GitHub repository has no releases
 
-**Lahendus:**
-1. Ava: `https://github.com/dz0nni/voicebell/releases`
-2. Kui tühi, siis pead looma esimese tag'i:
+**Solution:**
+1. Go to: `https://github.com/dz0nni/voicebell/releases`
+2. If empty, you need to create the first tag:
    ```bash
    git tag v0.1.0
    git push origin v0.1.0
@@ -163,93 +163,93 @@ Näiteks:
 
 ### ❌ "APK not found in release"
 
-**Probleem:** Release eksisteerib, aga APK puudub
+**Problem:** Release exists but APK is missing
 
-**Lahendus:**
-1. Kontrolli GitHub Actions: `Actions` tab
-2. Vaata kas `Build and Release APK` workflow õnnestus
-3. Kui ebaõnnestus, vaata logisid ja paranda vead
+**Solution:**
+1. Check GitHub Actions: `Actions` tab
+2. See if `Build and Release APK` workflow succeeded
+3. If failed, check logs and fix errors
 
 ### ❌ "Installation blocked"
 
-**Probleem:** Android blokeerib unknown source'ist installimise
+**Problem:** Android blocks installation from unknown source
 
-**Lahendus:**
+**Solution:**
 1. Settings → Security → Install Unknown Apps
-2. Leia Obtainium
-3. Luba "Allow from this source"
+2. Find Obtainium
+3. Allow "Allow from this source"
 
 ### ❌ "Parse error"
 
-**Probleem:** APK on kahjustatud või vale arhitektuur
+**Problem:** APK is corrupted or wrong architecture
 
-**Lahendus:**
-1. Obtainiumis → VoiceBell → Remove
-2. Lisa uuesti ja proovi uuesti
-3. Veendu, et APK Filter on seatud: `debug\.apk$`
+**Solution:**
+1. In Obtainium → VoiceBell → Remove
+2. Add again and retry
+3. Ensure APK Filter is set to: `debug\.apk$`
 
 ### ❌ Updates not working
 
-**Probleem:** Obtainium ei leia uuendusi
+**Problem:** Obtainium doesn't find updates
 
-**Lahendus:**
+**Solution:**
 1. Obtainium → Settings → Clear Cache
-2. Kontrolli Background Updates on enabled
-3. Käsitsi refresh: ↻ nupp VoiceBelli juures
+2. Check Background Updates is enabled
+3. Manual refresh: ↻ button next to VoiceBell
 
-## Võrdlus Teiste Meetoditega
+## Comparison with Other Methods
 
-| Meetod | Plussid | Miinused |
-|--------|---------|----------|
-| **Obtainium** | ✅ Automaatne<br>✅ Privaatne<br>✅ Kiire | ⚠️ Vajab seadistamist |
-| **GitHub Manual** | ✅ Lihtne<br>✅ Ametlik | ❌ Manuaalne<br>❌ Aeglane |
-| **F-Droid** | ✅ Ametlik<br>✅ Turvaline | ⏳ Tuleb tulevikus<br>⏳ Aeglane review |
-| **Google Play** | ✅ Tuntud | ⏳ Tuleb tulevikus<br>❌ Privaatsus |
+| Method | Pros | Cons |
+|--------|------|------|
+| **Obtainium** | ✅ Automatic<br>✅ Private<br>✅ Fast | ⚠️ Requires setup |
+| **GitHub Manual** | ✅ Simple<br>✅ Official | ❌ Manual<br>❌ Slow |
+| **F-Droid** | ✅ Official<br>✅ Secure | ⏳ Coming soon<br>⏳ Slow review |
+| **Google Play** | ✅ Well-known | ⏳ Coming soon<br>❌ Privacy |
 
-## Turvalisus
+## Security
 
-### Obtainium on turvaline:
-- ✅ Avatud lähtekoodiga
-- ✅ Laadib otse GitHubist
-- ✅ Kontrollib APK signatuuri
-- ✅ Ei jälgi sind
-- ✅ Ei salvesta andmeid
+### Obtainium is secure:
+- ✅ Open source
+- ✅ Downloads directly from GitHub
+- ✅ Verifies APK signatures
+- ✅ Doesn't track you
+- ✅ Doesn't store data
 
-### VoiceBell on turvaline:
-- ✅ Avatud lähtekoodiga (GPL-3.0)
+### VoiceBell is secure:
+- ✅ Open source (GPL-3.0)
 - ✅ 100% offline
-- ✅ Ei kasuta interneti luba
-- ✅ Ei jälgi sind
-- ✅ Kõik andmed lokaalselt
+- ✅ No internet permission
+- ✅ Doesn't track you
+- ✅ All data stored locally
 
-### Veendu Turvalises Allalaadimises:
-1. ✅ URL on `github.com/dz0nni/voicebell`
-2. ✅ Release'id on signed by GitHub Actions
-3. ✅ APK package name on `com.voicebell.clock`
-4. ✅ Kontrolli SHA256 checksummi (valikuline)
+### Ensure Secure Download:
+1. ✅ URL is `github.com/dz0nni/voicebell`
+2. ✅ Releases are signed by GitHub Actions
+3. ✅ APK package name is `com.voicebell.clock`
+4. ✅ Check SHA256 checksum (optional)
 
-## Järgmised Sammud
+## Next Steps
 
-Pärast installimist:
+After installation:
 
-1. **Esmakordne Seadistamine:**
-   - Anna vajalikud load
-   - Vali UI Mode (Classic või Experimental)
-   - Seadista esimene äratus
+1. **Initial Setup:**
+   - Grant necessary permissions
+   - Choose UI Mode (Classic or Experimental)
+   - Set up your first alarm
 
-2. **Tutvu Funktsioonidega:**
-   - Loo äratus kõikide funktsioonidega
-   - Proovi timerit
-   - Testi stopwatch'i
-   - Lisa world clock
-   - Proovi voice command'i (kui Vosk mudel olemas)
+2. **Explore Features:**
+   - Create alarm with all features
+   - Try timer
+   - Test stopwatch
+   - Add world clock
+   - Try voice commands (if Vosk model installed)
 
-3. **Anna Tagasisidet:**
-   - GitHub Issues: raportreeri bugi või soovita funktsiooni
-   - GitHub Discussions: küsi küsimusi
-   - GitHub Star: toeta projekti ⭐
+3. **Provide Feedback:**
+   - GitHub Issues: report bugs or suggest features
+   - GitHub Discussions: ask questions
+   - GitHub Star: support the project ⭐
 
-## Kasulikud Lingid
+## Useful Links
 
 - **VoiceBell GitHub:** https://github.com/dz0nni/voicebell
 - **VoiceBell Releases:** https://github.com/dz0nni/voicebell/releases
@@ -257,26 +257,26 @@ Pärast installimist:
 - **Obtainium GitHub:** https://github.com/ImranR98/Obtainium
 - **Obtainium F-Droid:** https://f-droid.org/packages/dev.imranr.obtainium.fdroid
 
-## Abi ja Tugi
+## Help and Support
 
-Kui vajad abi:
+If you need help:
 
-1. **Loe dokumentatsiooni:**
+1. **Read the documentation:**
    - README.md
    - ARCHITECTURE.md
    - TESTING_SUMMARY.md
 
-2. **Otsi olemasolevaid issue'sid:**
+2. **Search existing issues:**
    - GitHub Issues tab
 
-3. **Loo uus issue:**
-   - Kirjelda probleem
-   - Lisa ekraanitõmmised
-   - Märgi oma Android versioon
-   - Märgi VoiceBelli versioon
+3. **Create a new issue:**
+   - Describe the problem
+   - Add screenshots
+   - Include your Android version
+   - Include VoiceBell version
 
 ---
 
-**Nauди VoiceBelli! 🔔**
+**Enjoy VoiceBell! 🔔**
 
 *Privacy-focused, offline-first, open-source alarm clock for Android.*
