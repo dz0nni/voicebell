@@ -2,8 +2,26 @@
 
 **Date:** 2025-11-05
 **Branch:** `feature/alarm-improvements`
-**Commit:** `c3c6549292039e6698f317102ce057e42485f498`
+**Latest Commit:** `0b61c9b` (Bundle Vosk model with APK)
 **Feature:** Offline Voice Recognition with Vosk
+
+---
+
+## 🎉 IMPORTANT UPDATE: Model Now Bundled!
+
+**As of commit `0b61c9b`**, the Vosk speech recognition model is **bundled directly with the APK**.
+
+### What This Means:
+- ✅ **No internet required** - model ships with the app
+- ✅ **Instant availability** - just tap "Install" to extract (3-5 seconds)
+- ✅ **100% offline** - true privacy-first operation
+- ✅ **No INTERNET permission** - maintains app's offline-first principle
+- ⚠️ **Larger APK** - ~55 MB (was ~15 MB)
+
+### Previous Approach (Removed):
+- ❌ Download from internet (~40 MB over WiFi)
+- ❌ Required INTERNET permission (against privacy principles)
+- ❌ Network dependency
 
 ---
 
@@ -13,10 +31,10 @@ Before starting, ensure you have:
 
 - [ ] Android device or emulator (Android 10+ / API 29+)
 - [ ] Android SDK installed and configured
-- [ ] Internet connection (for first-time model download)
-- [ ] ~100 MB free storage on device (40 MB model + APK)
+- [ ] ~100 MB free storage on device (55 MB APK + 40 MB extracted model)
 - [ ] Microphone access available
 - [ ] Working directory: `/docker/tannu/claude/clock-features`
+- [ ] **No internet required** - model is bundled with APK!
 
 ---
 
@@ -52,7 +70,7 @@ c3c6549 Implement Vosk offline voice recognition integration
 **Expected:**
 - Build should succeed without errors
 - APK location: `app/build/outputs/apk/debug/app-debug.apk`
-- APK size: ~15-25 MB (without Vosk model)
+- APK size: ~55 MB (includes bundled Vosk model ~40 MB)
 
 **Common Issues:**
 
@@ -94,7 +112,7 @@ adb -e install app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
-## 🧪 Phase 2: Vosk Model Download Testing
+## 🧪 Phase 2: Vosk Model Installation Testing
 
 ### Step 2.1: Launch App
 
@@ -114,47 +132,43 @@ adb -e install app/build/outputs/apk/debug/app-debug.apk
 ```
 ┌─────────────────────────────────────────┐
 │ Voice Recognition Model                 │
-│ Download required (~40 MB)              │
-│                              [Download] │
+│ Installation required (~40 MB)          │
+│                                [Install]│
 │                                         │
 │ Voice commands require offline speech  │
-│ recognition model. Download over WiFi  │
-│ recommended.                            │
+│ recognition model. Model is bundled    │
+│ with the app (no internet required).   │
 └─────────────────────────────────────────┘
 ```
 
-### Step 2.3: Test Model Download
+### Step 2.3: Test Model Installation
 
-1. **Ensure WiFi connection** (40 MB download)
-2. Tap **"Download"** button
+1. **No internet needed** - model bundled with APK
+2. Tap **"Install"** button
 
 **Expected behavior:**
 
 - Button changes to circular progress indicator
 - Linear progress bar appears below
 - Progress updates: 0% → 100%
-- Download phases:
-  - 0-70%: Downloading ZIP from alphacephei.com
-  - 70-100%: Extracting ZIP
+- Extraction from APK assets to internal storage
 
 **Timeline:**
-- Good connection: 30-60 seconds
-- Slow connection: 2-5 minutes
+- Typical: 3-5 seconds
+- Slower devices: 10-15 seconds
 
-**During download, check logcat:**
+**During installation, check logcat:**
 ```bash
 adb logcat | grep -i vosk
 ```
 
 **Expected logs:**
 ```
-VoskModelManager: Starting model download from https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
-VoskModelManager: File size: 40 MB
-VoskModelManager: Extracting model...
-VoskModelManager: Model downloaded and extracted successfully
+VoskModelManager: Extracting model from assets
+VoskModelManager: Model extracted successfully
 ```
 
-### Step 2.4: Verify Download Success
+### Step 2.4: Verify Installation Success
 
 **UI should change to:**
 ```
@@ -178,8 +192,8 @@ adb shell ls -lh /data/data/com.voicebell.clock/files/vosk-model/
 
 1. Tap **delete icon** (🗑️)
 2. Model should be removed
-3. Card should return to "Download required" state
-4. **Re-download** before proceeding to Phase 3
+3. Card should return to "Installation required" state
+4. **Re-install** before proceeding to Phase 3
 
 ---
 
@@ -360,11 +374,11 @@ adb shell dumpsys batterystats | grep voicebell
 1. Quickly tap microphone button 10 times
 2. **Expected:** No crashes, service handles gracefully
 
-### Test 5.2: Network Interruption During Download
+### Test 5.2: Installation with Low Storage
 
-1. Start model download
-2. Turn off WiFi at 50%
-3. **Expected:** Download fails, error shown, cleanup occurs
+1. Fill device storage to <100 MB free
+2. Try to install model
+3. **Expected:** Installation may fail with storage error
 
 ### Test 5.3: App Killed During Listening
 
@@ -379,11 +393,11 @@ adb shell dumpsys batterystats | grep voicebell
 2. Rotate device
 3. **Expected:** UI recreates, service continues
 
-### Test 5.5: Low Storage
+### Test 5.5: Corrupted Assets
 
-1. Fill device storage to <100 MB
-2. Try to download model
-3. **Expected:** Error: "Insufficient storage"
+1. This test requires manual APK modification (skip for normal testing)
+2. If assets are missing/corrupted, installation should fail gracefully
+3. **Expected:** Error message, no crash
 
 ---
 
@@ -437,10 +451,10 @@ VoiceRecognitionService: Recording stopped
 
 ### Mandatory Checks (All must pass)
 
-- [ ] APK builds without errors
+- [ ] APK builds without errors (~55 MB size)
 - [ ] App installs successfully
-- [ ] Model download completes (40 MB)
-- [ ] Model extracts without errors
+- [ ] Model installation completes (extraction from assets)
+- [ ] Model extracts without errors (~40 MB)
 - [ ] Microphone permission granted
 - [ ] Voice recognition service starts
 - [ ] At least 5/5 alarm commands work
@@ -456,7 +470,7 @@ VoiceRecognitionService: Recording stopped
 ### Optional Checks (Nice to have)
 
 - [ ] Model deletion works
-- [ ] Re-download works after deletion
+- [ ] Re-installation works after deletion
 - [ ] Handles low storage gracefully
 - [ ] Handles permission denial gracefully
 - [ ] Error messages are user-friendly
@@ -473,13 +487,13 @@ VoiceRecognitionService: Recording stopped
 1. **English Only:** Vosk model is English (US). Other languages will fail.
 2. **Quiet Environment:** Works best without background noise.
 3. **Clear Speech:** Mumbling or fast speech may not work.
-4. **Internet for Download:** First-time download needs internet.
+4. **100% Offline:** Model bundled with APK, no internet required!
 5. **No Wake Word:** Must press button (no "Hey VoiceBell" activation).
 6. **No TTS Feedback:** No voice confirmation (TTS planned for next phase).
 
 ### Known Issues to Ignore:
 
-1. **Model Download Slow:** 40 MB takes time on slow connections (expected).
+1. **Large APK Size:** ~55 MB due to bundled model (expected).
 2. **First Recognition Slow:** Model loading ~2-3 seconds (expected).
 3. **Partial Results:** May see incomplete text briefly (expected, for debugging).
 4. **No Cancel Command:** "Cancel alarm" not implemented yet (planned).
@@ -524,7 +538,7 @@ If you find bugs, report using this format:
 ## 🎯 Testing Priority
 
 ### Priority 1 (CRITICAL):
-1. Model download
+1. Model installation (extraction from assets)
 2. Voice recognition starts
 3. Alarm creation from voice
 4. Timer creation from voice
