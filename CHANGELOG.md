@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alarm fade-in duration customization
 - Weather integration (optional, privacy-preserving)
 
+## [0.1.6] - 2025-11-07 (Offline Vosk Model)
+
+### Added
+- ✅ **Bundled Vosk model** - Voice recognition model now included in APK
+- ✅ No internet required for first launch
+- ✅ Improved user experience - no manual model download needed
+
+### Changed
+- 🔧 Removed redundant JNA dependency (transitively included by Vosk)
+- 🔧 Improved Alarm model usage in voice commands
+- 🔧 Fixed coroutine context checks in VoiceRecognitionService
+
+### Technical
+- APK size increased by ~40MB (includes vosk-model-small-en-us-0.15)
+- Users no longer need to download model separately
+- Streamlined first-time setup experience
+
 ## [0.1.5] - 2025-11-07 (Unit Testing Release)
 
 ### Added - Testing Infrastructure
@@ -237,7 +254,8 @@ Found a bug or have a feature request?
 
 ---
 
-[Unreleased]: https://github.com/dz0nni/voicebell/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/dz0nni/voicebell/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/dz0nni/voicebell/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/dz0nni/voicebell/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/dz0nni/voicebell/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/dz0nni/voicebell/compare/v0.1.2...v0.1.3
