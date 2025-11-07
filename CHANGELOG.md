@@ -18,6 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.6] - 2025-11-07 (Offline Vosk Model)
 ## [0.1.7] - 2025-11-08 (Voice Recognition Fixed)
+## [0.1.8] - 2025-11-08 (Critical Fix - JNA Library)
+
+### Fixed
+- 🔴 **CRITICAL: App crash on voice button press** - Added missing JNA library
+- ✅ Voice recognition now actually works (for real this time!)
+
+### Technical
+- Re-added `net.java.dev.jna:jna:5.13.0` dependency (required by Vosk)
+- Vosk does NOT include JNA as transitive dependency
+- Previous version (0.1.7) crashed: `library "libjnidispatch.so" not found`
+
+**Note:** v0.1.6 and v0.1.7 had voice recognition broken. Please update to v0.1.8!
+
 
 ### Fixed
 - ✅ **Voice recognition now works!** Added missing Vosk model to APK
