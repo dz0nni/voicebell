@@ -243,7 +243,7 @@ class VoiceRecognitionService : Service() {
     private suspend fun processAudio(bufferSize: Int) {
         val buffer = ByteArray(bufferSize)
 
-        while (isActive && isRecording) {
+        while (coroutineContext.isActive && isRecording) {
             try {
                 val readBytes = audioRecord?.read(buffer, 0, buffer.size) ?: 0
 

@@ -141,7 +141,7 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Voice Recognition - Vosk (Offline)
-    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    // Note: Vosk includes JNA as transitive dependency, no need to add separately
     implementation("com.alphacephei:vosk-android:0.3.45")
 
     // DataStore (Preferences)
