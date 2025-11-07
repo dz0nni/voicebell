@@ -175,6 +175,21 @@ See our [Privacy Policy](PRIVACY_POLICY.md) for details.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details.
 
+## Documentation
+
+VoiceBell has comprehensive documentation for users, contributors, and developers:
+
+- **[Documentation Index](DOCUMENTATION_INDEX.md)** - Complete overview of all project documentation
+- **[Architecture](ARCHITECTURE.md)** - Technical architecture and design decisions
+- **[Testing Guide](UNIT_TESTING.md)** - Comprehensive unit testing guide
+- **[Testing Summary](TESTING_SUMMARY.md)** - Current testing status and statistics
+- **[Voice Commands](VOICE_COMMANDS.md)** - Complete voice command reference
+- **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
+- **[Privacy Policy](PRIVACY_POLICY.md)** - Privacy and data handling
+- **[Build Instructions](docs/BUILD.md)** - How to build from source
+
+For a complete list of all documentation, see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
