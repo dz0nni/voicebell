@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -100,6 +102,17 @@ fun SettingsScreen(
                     subtitle = "Use voice to set alarms and timers",
                     checked = state.settings.voiceCommandEnabled,
                     onCheckedChange = { viewModel.toggleVoiceCommand() }
+                )
+            }
+
+            // Voice model download button
+            item {
+                VoiceModelDownloadButton(
+                    isModelDownloaded = state.isVoiceModelDownloaded,
+                    isDownloading = state.isDownloadingModel,
+                    downloadProgress = state.modelDownloadProgress,
+                    onDownload = { viewModel.downloadVoiceModel() },
+                    onDelete = { viewModel.deleteVoiceModel() }
                 )
             }
 
@@ -441,4 +454,109 @@ private fun UiModeDialog(
             }
         }
     )
+}
+
+/**
+ * Voice model download button
+ */
+@Composable
+private fun VoiceModelDownloadButton(
+    isModelDownloaded: Boolean,
+    isDownloading: Boolean,
+    downloadProgress: Float,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isModelDownloaded) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Voice Recognition Model",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isModelDownloaded) {
+                            "Model installed (~40 MB)"
+                        } else {
+                            "Download required (~40 MB)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        progress = downloadProgress,
+                        modifier = Modifier.size(40.dp)
+                    )
+                } else {
+                    if (isModelDownloaded) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete model",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    } else {
+                        Button(onClick = onDownload) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Download")
+                        }
+                    }
+                }
+            }
+
+            // Progress indicator
+            if (isDownloading) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = downloadProgress,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${(downloadProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Info text
+            if (!isModelDownloaded && !isDownloading) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Voice commands require offline speech recognition model. Download over WiFi recommended.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
