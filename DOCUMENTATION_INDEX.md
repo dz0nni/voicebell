@@ -4,6 +4,7 @@ This document provides a complete overview of all project documentation and thei
 
 **Last Updated:** 2025-11-07
 **Project Version:** 0.1.5
+**Total Documents:** 20 (public)
 
 ---
 
@@ -170,20 +171,7 @@ This document provides a complete overview of all project documentation and thei
   - Configuration
   - Troubleshooting
 
-### 11. GITHUB_RELEASE_GUIDE.md
-- **Status:** ✅ Active, 📌 Reference
-- **Purpose:** GitHub release process
-- **Target Audience:** Maintainers
-- **Update Frequency:** When release process changes
-- **Last Updated:** 2025-11-03
-- **Location:** Root directory
-- **Key Sections:**
-  - Release checklist
-  - Version bumping
-  - Creating releases
-  - APK signing
-
-### 12. docs/F-DROID.md
+### 11. docs/F-DROID.md
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** F-Droid submission guide
 - **Target Audience:** Maintainers
@@ -199,7 +187,7 @@ This document provides a complete overview of all project documentation and thei
 
 ## Legal & Privacy Documentation
 
-### 13. PRIVACY_POLICY.md
+### 12. PRIVACY_POLICY.md
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Privacy policy for app stores
 - **Target Audience:** Users, app store reviewers
@@ -212,7 +200,7 @@ This document provides a complete overview of all project documentation and thei
   - Third-party services
   - User rights
 
-### 14. SECURITY.md
+### 13. SECURITY.md
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Security policy and vulnerability reporting
 - **Target Audience:** Security researchers, users
@@ -224,7 +212,7 @@ This document provides a complete overview of all project documentation and thei
   - Reporting vulnerabilities
   - Security best practices
 
-### 15. LICENSE (GPL-3.0)
+### 14. LICENSE (GPL-3.0)
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Open source license
 - **Target Audience:** All users, contributors
@@ -236,7 +224,7 @@ This document provides a complete overview of all project documentation and thei
 
 ## Setup & Configuration Documentation
 
-### 16. OBTAINIUM_SETUP.md
+### 15. OBTAINIUM_SETUP.md
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Obtainium app updater setup guide
 - **Target Audience:** End users
@@ -248,7 +236,7 @@ This document provides a complete overview of all project documentation and thei
   - Adding VoiceBell to Obtainium
   - Automatic updates setup
 
-### 17. NEXT_STEPS.md
+### 16. NEXT_STEPS.md
 - **Status:** ✅ Active, 🔄 Updated Regularly
 - **Purpose:** Roadmap and future plans
 - **Target Audience:** Contributors, users interested in future
@@ -265,7 +253,7 @@ This document provides a complete overview of all project documentation and thei
 
 ## Development Notes & Reports
 
-### 18. timer_test_summary.md
+### 17. timer_test_summary.md
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Detailed Timer module testing report
 - **Target Audience:** Developers
@@ -274,7 +262,7 @@ This document provides a complete overview of all project documentation and thei
 - **Location:** Root directory
 - **Note:** Detailed breakdown of Timer testing session
 
-### 19. test_coverage_analysis.txt
+### 18. test_coverage_analysis.txt
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Test coverage analysis notes
 - **Target Audience:** Developers
@@ -286,7 +274,7 @@ This document provides a complete overview of all project documentation and thei
 
 ## Scripts Documentation
 
-### 20. run_tests_incremental.sh
+### 19. run_tests_incremental.sh
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Fast incremental test execution
 - **Target Audience:** Developers
@@ -295,7 +283,7 @@ This document provides a complete overview of all project documentation and thei
 - **Location:** Root directory
 - **Documentation:** See UNIT_TESTING.md
 
-### 21. run_tests_safe.sh
+### 20. run_tests_safe.sh
 - **Status:** ✅ Active, 📌 Reference
 - **Purpose:** Full clean build test execution
 - **Target Audience:** Developers

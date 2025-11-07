@@ -143,3 +143,6 @@ hs_err_pid*
 # Test outputs
 test-results/
 test-output/
+
+# Personal documents (Estonian language)
+minule_kasutamiseks/
