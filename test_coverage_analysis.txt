@@ -1,0 +1,111 @@
+# Unit Test Coverage Analysis - VoiceBell Clock
+
+## Currently Tested (5 test files, 89 tests passing):
+
+### ✅ Alarm Module (Comprehensive)
+- AlarmRepositoryImplTest.kt (17 tests)
+  - CRUD operations
+  - State management
+  - Data mapping
+  
+- GetAlarmsUseCaseTest.kt (~15 tests)
+  - Get all alarms
+  - Get enabled alarms
+  
+- ToggleAlarmUseCaseTest.kt (7 tests)
+  - Enable/disable alarms
+  - Error handling
+  
+- AlarmViewModelTest.kt (48 tests)
+  - State management
+  - Event handling
+  - Navigation
+  - Effects
+
+### ✅ Voice Commands
+- VoiceCommandParserTest.kt (~12 tests)
+  - Alarm parsing
+  - Timer parsing
+  - Error cases
+
+## NOT YET TESTED - Priority List:
+
+### 🔴 Priority 1: Critical Business Logic
+
+**Timer Module** (0 tests)
+- [ ] TimerRepositoryImpl
+- [ ] StartTimerUseCase
+- [ ] PauseTimerUseCase
+- [ ] StopTimerUseCase
+- [ ] GetActiveTimerUseCase
+- [ ] TimerViewModel
+
+**Stopwatch Module** (0 tests)
+- [ ] StopwatchRepositoryImpl
+- [ ] StopwatchViewModel (complex state)
+
+**World Clock Module** (0 tests)
+- [ ] WorldClockRepositoryImpl
+- [ ] AddWorldClockUseCase
+- [ ] DeleteWorldClockUseCase
+- [ ] GetWorldClocksUseCase
+
+### 🟡 Priority 2: Important Use Cases
+
+**Alarm Use Cases** (partially tested)
+- [ ] CreateAlarmUseCase (not tested)
+- [ ] UpdateAlarmUseCase (not tested)
+- [ ] DeleteAlarmUseCase (not tested)
+- [ ] GetAlarmByIdUseCase (not tested)
+- [ ] ScheduleAlarmUseCase (not tested)
+
+**Settings Module** (0 tests)
+- [ ] SettingsRepositoryImpl
+- [ ] GetSettingsUseCase
+- [ ] UpdateUiModeUseCase
+- [ ] SettingsViewModel
+
+### 🟢 Priority 3: Utilities & Helpers
+
+**Already tested:**
+- [x] VoiceCommandParser
+
+**Not tested:**
+- [ ] AlarmScheduler (Android-specific, may need instrumentation)
+- [ ] NotificationHelper (Android-specific)
+- [ ] PermissionsHelper (Android-specific)
+
+**Voice/Vosk Integration** (needs instrumentation tests)
+- [ ] VoskWrapper (native library)
+- [ ] VoiceRecognitionService
+- [ ] ExecuteVoiceCommandUseCase
+- [ ] VoskModelManager
+
+## Test Count Summary:
+
+**Current:**
+- Tested modules: 2/5 (Alarm + VoiceCommandParser)
+- Test files: 5
+- Passing tests: 89
+- Code coverage: ~25-30% (estimated)
+
+**Potential:**
+- Total testable use cases: 23
+- Total repositories: 5
+- Total ViewModels: 6
+- Estimated tests needed: 200-250
+
+**Missing coverage by module:**
+- Timer: 0%
+- Stopwatch: 0%
+- World Clock: 0%
+- Settings: 0%
+- Alarm: ~60% (repository + some use cases tested)
+
+## Recommendation:
+
+**Next testing priorities:**
+1. Timer module (most used after alarms)
+2. Remaining Alarm use cases
+3. Settings repository
+4. World Clock & Stopwatch (lower priority)
