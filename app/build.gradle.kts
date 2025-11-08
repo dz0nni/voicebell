@@ -14,8 +14,8 @@ android {
         applicationId = "com.voicebell.clock"
         minSdk = 29
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.1.8"
+        versionCode = 10
+        versionName = "0.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -98,6 +98,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -141,8 +144,8 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Voice Recognition - Vosk (Offline)
-    implementation("com.alphacephei:vosk-android:0.3.45")
-    implementation("net.java.dev.jna:jna:5.13.0")  // Required for Vosk native library (libjnidispatch.so)
+    implementation("net.java.dev.jna:jna:5.13.0@aar")  // JNA with Android native libraries
+    implementation("com.alphacephei:vosk-android:0.3.45@aar")
 
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")

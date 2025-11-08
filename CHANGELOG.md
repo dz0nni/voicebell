@@ -16,6 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alarm fade-in duration customization
 - Weather integration (optional, privacy-preserving)
 
+## [0.1.9] - 2025-11-08 (Voice Recognition WORKING!)
+
+### Fixed
+- ✅ **Voice recognition now fully functional!**
+- Fixed JNA library packaging - using `@aar` format for Android
+- Fixed Vosk model path resolution after extraction from assets
+- App no longer crashes when pressing microphone button
+
+### Technical
+- Changed JNA dependency to `net.java.dev.jna:jna:5.13.0@aar`
+- Changed Vosk dependency to `com.alphacephei:vosk-android:0.3.45@aar`
+- Updated `VoskModelManager.getModelPath()` to handle ZIP subdirectory structure
+- Model extracts successfully from bundled assets on first run
+- All native libraries now properly included in APK
+
+### Testing
+- Tested successfully on Android emulator (API 36, Pixel 7 Pro)
+- Model initialization confirmed working
+- No crashes during voice recognition activation
+
 ## [0.1.6] - 2025-11-07 (Offline Vosk Model)
 ## [0.1.7] - 2025-11-08 (Voice Recognition Fixed)
 ## [0.1.8] - 2025-11-08 (Critical Fix - JNA Library)

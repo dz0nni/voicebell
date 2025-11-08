@@ -52,7 +52,14 @@ class VoskModelManager @Inject constructor(
      * Get the path to the model directory.
      */
     fun getModelPath(): String {
-        return modelDir.absolutePath
+        // The ZIP file contains a subdirectory with the model name
+        // Check if subdirectory exists, otherwise use modelDir directly
+        val subdirectory = File(modelDir, MODEL_NAME)
+        return if (subdirectory.exists() && subdirectory.isDirectory) {
+            subdirectory.absolutePath
+        } else {
+            modelDir.absolutePath
+        }
     }
 
     /**
