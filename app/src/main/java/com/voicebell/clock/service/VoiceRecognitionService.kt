@@ -24,8 +24,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 import org.json.JSONObject
 import java.io.File
@@ -62,9 +60,7 @@ class VoiceRecognitionService : Service() {
     private var recordingJob: Job? = null
     private var modelInitJob: Job? = null
 
-    @Volatile
     private var isRecording = false
-    @Volatile
     private var isModelReady = false
 
     companion object {
@@ -131,23 +127,7 @@ class VoiceRecognitionService : Service() {
         super.onDestroy()
         Log.d(TAG, "Service destroyed")
 
-        // Set flags BEFORE stopping recording to ensure processAudio sees them
-        isModelReady = false
-        isRecording = false
-
         stopRecording()
-
-        // Wait for recording job to finish before releasing Vosk (prevents native crash)
-        try {
-            runBlocking {
-                withTimeoutOrNull(500) {
-                    recordingJob?.join()
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error waiting for recording job", e)
-        }
-
         voskWrapper.release()
         serviceScope.cancel()
     }
@@ -287,6 +267,10 @@ class VoiceRecognitionService : Service() {
             audioRecord?.release()
             audioRecord = null
 
+            // Get final result from Vosk
+            val finalResult = voskWrapper.finalResult()
+            processFinalResult(finalResult)
+
             Log.i(TAG, "Recording stopped")
 
         } catch (e: Exception) {
@@ -299,31 +283,18 @@ class VoiceRecognitionService : Service() {
      */
     private suspend fun processAudio(bufferSize: Int) {
         val buffer = ByteArray(bufferSize)
-        var finalResultProcessed = false  // Track if final result was already processed
 
-        while (coroutineContext.isActive && isRecording && isModelReady) {
+        while (coroutineContext.isActive && isRecording) {
             try {
-                // Check if still recording (may have stopped)
-                if (!isRecording || !isModelReady) break
-
                 val readBytes = audioRecord?.read(buffer, 0, buffer.size) ?: 0
 
                 if (readBytes > 0) {
-                    // Check again before sending to Vosk (may have stopped during read)
-                    if (!isRecording || !isModelReady) break
-
-                    // Send audio to Vosk (wrapped in try-catch for safety)
-                    val result = try {
-                        voskWrapper.acceptAudioChunk(buffer)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Vosk may have been released during processing", e)
-                        break
-                    }
+                    // Send audio to Vosk
+                    val result = voskWrapper.acceptAudioChunk(buffer)
 
                     // If final result available, process it
                     if (result != null) {
                         processFinalResult(result)
-                        finalResultProcessed = true  // Mark as processed
                         // Stop after getting result (push-to-talk pattern)
                         stopRecording()
                         break
@@ -336,19 +307,6 @@ class VoiceRecognitionService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing audio", e)
                 break
-            }
-        }
-
-        // Get final result after loop ends ONLY if not already processed
-        if (!finalResultProcessed) {
-            try {
-                // Double-check model is still ready before calling finalResult
-                if (!isRecording && isModelReady) {
-                    val finalResult = voskWrapper.finalResult()
-                    processFinalResult(finalResult)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Vosk may have been released before finalResult", e)
             }
         }
     }
