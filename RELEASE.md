@@ -288,7 +288,10 @@ Test that Obtainium can:
 
 ### v0.1.9 (Current)
 - **Keystore:** voicebell-release.keystore (release keystore, created 2025-11-08)
-- **Signature:** `[signature hash will be added]`
+- **Certificate DN:** CN=VoiceBell, OU=Development, O=VoiceBell, L=Tallinn, ST=Harjumaa, C=EE
+- **SHA-256:** `6e5710e2575b30c328412ddb0d3b9e2fd04abf73a00734a029241c11bc421a67`
+- **SHA-1:** `c07c99ca1e1c06c001035fe033dde99e7ca28be6`
+- **Signature Scheme:** v2 (APK Signature Scheme v2)
 - First release with production keystore
 
 ### v0.1.8 (Previous)
