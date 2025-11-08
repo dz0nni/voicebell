@@ -15,8 +15,10 @@ This document describes how to create and publish new releases of VoiceBell.
 3. **Release Keystore**
    - Location: `voicebell-release.keystore` (in project root, ignored by Git)
    - Alias: `voicebell`
-   - Password: `VoiceBell2025!Secure` (store securely!)
+   - Keystore Password: **[PRIVATE - Not in Git]**
+   - Key Password: **[PRIVATE - Not in Git]**
    - **CRITICAL:** Never commit the keystore to Git!
+   - **CRITICAL:** Never commit passwords to Git!
    - **CRITICAL:** Back up the keystore securely!
    - **CRITICAL:** All releases must use the same keystore!
 
@@ -110,27 +112,28 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 # You will be prompted:
 # Keystore password for signer #1:
-# (type: VoiceBell2025!Secure)
+# (enter your keystore password)
 ```
 
 #### Method 2: Environment Variable
 
 ```bash
-# Set password in environment (won't appear in history)
+# Set passwords in environment (won't appear in history)
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-export KEYSTORE_PASSWORD="VoiceBell2025!Secure"
+export KS_PASS="[YOUR_KEYSTORE_PASSWORD]"
+export KEY_PASS="[YOUR_KEY_PASSWORD]"
 
-# Sign APK using environment variable
+# Sign APK using environment variables
 ~/Library/Android/sdk/build-tools/34.0.0/apksigner sign \
   --ks voicebell-release.keystore \
   --ks-key-alias voicebell \
-  --ks-pass env:KEYSTORE_PASSWORD \
-  --key-pass env:KEYSTORE_PASSWORD \
+  --ks-pass env:KS_PASS \
+  --key-pass env:KEY_PASS \
   --out VoiceBell-0.1.10.apk \
   app/build/outputs/apk/release/app-release-unsigned.apk
 
-# Clear password from environment
-unset KEYSTORE_PASSWORD
+# Clear passwords from environment
+unset KS_PASS KEY_PASS
 ```
 
 #### Method 3: Secure Script (Best for Automation)
@@ -300,13 +303,17 @@ Test that Obtainium can:
 
 ### Keystore Password Management
 
-**Current password:** `VoiceBell2025!Secure`
+**Current passwords:**
+- Keystore Password: **[PRIVATE - Stored securely offline]**
+- Key Password: **[PRIVATE - Stored securely offline]**
 
 **Best practices:**
-- Never commit password to Git
-- Never share password in public channels
-- Consider using environment variables in scripts
-- Rotate password periodically (regenerate keystore if needed)
+- **NEVER** commit passwords to Git
+- **NEVER** share passwords in public channels
+- Store passwords in password manager or encrypted storage
+- Use environment variables in scripts (never hardcode)
+- Keep encrypted backups of passwords
+- Keystore and key passwords are different for enhanced security
 
 ### GitHub Secrets (for CI/CD)
 
@@ -319,7 +326,8 @@ If setting up automated builds:
 
 2. Add GitHub secrets:
    - `KEYSTORE_BASE64`: content of keystore.b64
-   - `KEYSTORE_PASSWORD`: `VoiceBell2025!Secure`
+   - `KEYSTORE_PASSWORD`: [your keystore password]
+   - `KEY_PASSWORD`: [your key password]
    - `KEY_ALIAS`: `voicebell`
 
 3. Update `.github/workflows/release.yml` to use secrets
@@ -354,7 +362,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
   --ks-key-alias voicebell \
   --out VoiceBell-0.1.10.apk \
   app/build/outputs/apk/release/app-release-unsigned.apk
-# (Enter password when prompted: VoiceBell2025!Secure)
+# (Enter keystore password when prompted)
 ```
 
 ## Additional Resources

@@ -27,14 +27,16 @@ if [ ! -f "$KEYSTORE" ]; then
     exit 1
 fi
 
-# Prompt for password securely (won't show in terminal or history)
+# Prompt for passwords securely (won't show in terminal or history)
 echo "VoiceBell Release APK Signing"
 echo "=============================="
-read -s -p "Keystore password: " KEYSTORE_PASSWORD
+read -s -p "Keystore password: " KS_PASS
+echo ""
+read -s -p "Key password: " KEY_PASS
 echo ""
 
-if [ -z "$KEYSTORE_PASSWORD" ]; then
-    echo "Error: Password cannot be empty"
+if [ -z "$KS_PASS" ] || [ -z "$KEY_PASS" ]; then
+    echo "Error: Passwords cannot be empty"
     exit 1
 fi
 
@@ -53,13 +55,13 @@ echo "Signing APK..."
 $APKSIGNER sign \
   --ks "$KEYSTORE" \
   --ks-key-alias voicebell \
-  --ks-pass env:KEYSTORE_PASSWORD \
-  --key-pass env:KEYSTORE_PASSWORD \
+  --ks-pass env:KS_PASS \
+  --key-pass env:KEY_PASS \
   --out "$OUTPUT_APK" \
   "$UNSIGNED_APK"
 
-# Clear password from memory immediately
-unset KEYSTORE_PASSWORD
+# Clear passwords from memory immediately
+unset KS_PASS KEY_PASS
 
 # Verify signature
 echo ""
