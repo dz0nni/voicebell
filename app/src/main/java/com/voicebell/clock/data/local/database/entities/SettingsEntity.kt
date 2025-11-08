@@ -15,7 +15,7 @@ data class SettingsEntity(
     /**
      * UI mode: CLASSIC or EXPERIMENTAL
      */
-    val uiMode: String = "CLASSIC",
+    val uiMode: String = "EXPERIMENTAL",
 
     /**
      * Theme mode: LIGHT, DARK, or SYSTEM

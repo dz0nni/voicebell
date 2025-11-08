@@ -123,7 +123,7 @@ fun VoiceCommandScreen(
                 text = if (state.isListening) {
                     "Listening... Speak now"
                 } else {
-                    "Press and hold to speak"
+                    "Tap to start listening"
                 },
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,

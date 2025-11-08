@@ -26,14 +26,7 @@ class StartTimerUseCase @Inject constructor(
                 return Result.failure(IllegalArgumentException("Duration must be positive"))
             }
 
-            // Check if there's already a running timer
-            val runningTimer = timerRepository.getRunningTimer()
-            if (runningTimer != null) {
-                return Result.failure(
-                    IllegalStateException("Cannot start timer: Timer ${runningTimer.id} is already running")
-                )
-            }
-
+            // Multiple timers are allowed to run simultaneously
             val timer = Timer(
                 label = label,
                 durationMillis = durationMillis,
