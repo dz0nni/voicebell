@@ -52,11 +52,16 @@ class VoiceRecognitionService : Service() {
     @Inject
     lateinit var voskModelManager: com.voicebell.clock.util.VoskModelManager
 
+    @Inject
+    lateinit var executeVoiceCommand: com.voicebell.clock.domain.usecase.voice.ExecuteVoiceCommandUseCase
+
     private var audioRecord: AudioRecord? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var recordingJob: Job? = null
+    private var modelInitJob: Job? = null
 
     private var isRecording = false
+    private var isModelReady = false
 
     companion object {
         private const val TAG = "VoiceRecognitionService"
@@ -132,7 +137,7 @@ class VoiceRecognitionService : Service() {
      * If model doesn't exist, extract it from assets first.
      */
     private fun initializeVoskModel() {
-        serviceScope.launch {
+        modelInitJob = serviceScope.launch {
             try {
                 // Check if model is already extracted
                 if (!voskModelManager.isModelDownloaded()) {
@@ -142,6 +147,7 @@ class VoiceRecognitionService : Service() {
                     if (extractResult.isFailure) {
                         Log.e(TAG, "Failed to extract model from assets", extractResult.exceptionOrNull())
                         broadcastResult(null, false, "Failed to load voice model from assets")
+                        isModelReady = false
                         return@launch
                     }
 
@@ -156,18 +162,22 @@ class VoiceRecognitionService : Service() {
                 if (!initialized) {
                     Log.e(TAG, "Failed to initialize Vosk model")
                     broadcastResult(null, false, "Failed to load voice model")
+                    isModelReady = false
                 } else {
                     Log.i(TAG, "Vosk model initialized successfully")
+                    isModelReady = true
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error initializing Vosk model", e)
                 broadcastResult(null, false, "Error loading voice model: ${e.message}")
+                isModelReady = false
             }
         }
     }
 
     /**
      * Start recording audio from microphone.
+     * Waits for Vosk model to be ready before starting.
      */
     private fun startRecording() {
         if (isRecording) {
@@ -175,11 +185,26 @@ class VoiceRecognitionService : Service() {
             return
         }
 
-        if (!voskWrapper.isInitialized()) {
-            Log.e(TAG, "Vosk wrapper not initialized")
-            broadcastResult(null, false, "Voice recognition not ready")
-            return
+        // Wait for model initialization to complete
+        serviceScope.launch {
+            Log.d(TAG, "Waiting for Vosk model to be ready...")
+            modelInitJob?.join() // Wait for init to complete
+
+            if (!isModelReady) {
+                Log.e(TAG, "Vosk model failed to initialize")
+                broadcastResult(null, false, "Voice recognition not ready")
+                return@launch
+            }
+
+            Log.d(TAG, "Vosk model ready, starting audio recording")
+            startAudioRecording()
         }
+    }
+
+    /**
+     * Actually start the audio recording (called after model is ready).
+     */
+    private fun startAudioRecording() {
 
         try {
             val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
@@ -309,11 +334,26 @@ class VoiceRecognitionService : Service() {
 
             Log.i(TAG, "Recognized text: $text")
 
-            // Parse voice command
-            val commandResult = voiceCommandParser.parseCommand(text)
+            // Execute voice command
+            serviceScope.launch {
+                try {
+                    val result = executeVoiceCommand(text)
 
-            // Broadcast result to UI
-            broadcastResult(text, true, null)
+                    when (result) {
+                        is com.voicebell.clock.domain.usecase.voice.CommandExecutionResult.Success -> {
+                            Log.i(TAG, "Command executed successfully: ${result.message}")
+                            broadcastResult(text, true, null)
+                        }
+                        is com.voicebell.clock.domain.usecase.voice.CommandExecutionResult.Error -> {
+                            Log.e(TAG, "Command execution failed: ${result.message}")
+                            broadcastResult(text, false, result.message)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error executing command", e)
+                    broadcastResult(text, false, "Failed to execute command: ${e.message}")
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing result", e)

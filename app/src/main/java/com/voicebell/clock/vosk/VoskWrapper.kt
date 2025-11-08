@@ -21,6 +21,7 @@ class VoskWrapper @Inject constructor() {
 
     private var model: Model? = null
     private var recognizer: Recognizer? = null
+    private var lastPartialText: String = ""
 
     companion object {
         private const val TAG = "VoskWrapper"
@@ -75,6 +76,19 @@ class VoskWrapper @Inject constructor() {
                 // Partial result (ongoing recognition)
                 val partial = rec.partialResult
                 Log.v(TAG, "Partial result: $partial")
+
+                // Save last partial text for fallback
+                try {
+                    val partialJson = org.json.JSONObject(partial)
+                    val partialText = partialJson.optString("partial", "").trim()
+                    if (partialText.isNotEmpty()) {
+                        lastPartialText = partialText
+                        Log.v(TAG, "Saved partial text: $lastPartialText")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse partial result", e)
+                }
+
                 null
             }
         } catch (e: Exception) {
@@ -95,6 +109,23 @@ class VoskWrapper @Inject constructor() {
         return try {
             val result = rec.finalResult
             Log.d(TAG, "Final result retrieved: $result")
+
+            // If final result is empty, use last partial text as fallback
+            try {
+                val json = org.json.JSONObject(result)
+                val text = json.optString("text", "").trim()
+
+                if (text.isEmpty() && lastPartialText.isNotEmpty()) {
+                    Log.i(TAG, "Final result empty, using last partial text: $lastPartialText")
+                    // Create JSON with partial text as final text
+                    val fallbackJson = org.json.JSONObject()
+                    fallbackJson.put("text", lastPartialText)
+                    return fallbackJson.toString()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse final result for fallback", e)
+            }
+
             result
         } catch (e: Exception) {
             Log.e(TAG, "Error getting final result", e)
@@ -129,6 +160,7 @@ class VoskWrapper @Inject constructor() {
                 // Recreate recognizer with same model
                 model?.let { m ->
                     recognizer = Recognizer(m, SAMPLE_RATE)
+                    lastPartialText = "" // Clear saved partial text
                     Log.d(TAG, "Recognizer reset")
                 }
             } catch (e: Exception) {
