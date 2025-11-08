@@ -24,15 +24,42 @@ class VoiceCommandParser @Inject constructor() {
         return when {
             isAlarmCommand(normalizedText) -> parseAlarmCommand(normalizedText)
             isTimerCommand(normalizedText) -> parseTimerCommand(normalizedText)
-            else -> VoiceCommandResult.Unknown(text)
+            // Fallback: try to infer command type from content
+            else -> inferCommandFromContent(normalizedText, text)
         }
+    }
+
+    /**
+     * Try to infer command type from content even without explicit keywords.
+     * This helps with partial/distorted voice recognition.
+     */
+    private fun inferCommandFromContent(normalizedText: String, originalText: String): VoiceCommandResult {
+        // Check if there's a duration mentioned - likely a timer
+        val duration = extractDuration(normalizedText)
+        if (duration != null && duration > 0) {
+            return VoiceCommandResult.TimerCommand(
+                durationMillis = duration,
+                label = null
+            )
+        }
+
+        // Check if there's a time mentioned - likely an alarm
+        val time = extractTime(normalizedText)
+        if (time != null) {
+            return VoiceCommandResult.AlarmCommand(
+                time = time,
+                label = null
+            )
+        }
+
+        return VoiceCommandResult.Unknown(originalText)
     }
 
     /**
      * Checks if the text is an alarm command.
      */
     private fun isAlarmCommand(text: String): Boolean {
-        val alarmKeywords = listOf("alarm", "wake me", "wake up")
+        val alarmKeywords = listOf("alarm", "wake me", "wake up", "wake", "me up at", "up at")
         return alarmKeywords.any { text.contains(it) }
     }
 
@@ -41,7 +68,9 @@ class VoiceCommandParser @Inject constructor() {
      */
     private fun isTimerCommand(text: String): Boolean {
         val timerKeywords = listOf("timer", "countdown", "count down")
-        return timerKeywords.any { text.contains(it) }
+        // Also check for patterns like "for X minutes/seconds"
+        val forDurationPattern = """for\s+\d+\s+(?:minute|second|hour)""".toRegex()
+        return timerKeywords.any { text.contains(it) } || forDurationPattern.containsMatchIn(text)
     }
 
     /**
@@ -84,6 +113,13 @@ class VoiceCommandParser @Inject constructor() {
      * - "eight thirty"
      */
     private fun extractTime(text: String): LocalTime? {
+        // Early exit: if text contains duration patterns, it's likely a timer, not an alarm
+        val durationPattern = """\d+\s*(?:minute|second|hour)""".toRegex()
+        if (durationPattern.containsMatchIn(text)) {
+            // This looks like a timer command, not an alarm
+            return null
+        }
+
         // Pattern 1: 7 AM, 7:30 PM
         val timeAmPm = """(\d{1,2})(?::(\d{2}))?\s*(am|pm)""".toRegex()
         timeAmPm.find(text)?.let { match ->
@@ -111,15 +147,82 @@ class VoiceCommandParser @Inject constructor() {
             }
         }
 
-        // Pattern 3: "seven o'clock", "eight thirty"
-        val wordToNumber = mapOf(
+        // Pattern 3: Handle compound times like "at seven twenty five"
+        // Look for pattern: "at [hour word] [optional minute words]"
+        val hourWords = mapOf(
             "one" to 1, "two" to 2, "three" to 3, "four" to 4,
             "five" to 5, "six" to 6, "seven" to 7, "eight" to 8,
             "nine" to 9, "ten" to 10, "eleven" to 11, "twelve" to 12
         )
 
-        for ((word, number) in wordToNumber) {
-            if (text.contains(word)) {
+        val minuteWords = mapOf(
+            "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
+            "fourteen" to 14, "fifteen" to 15, "sixteen" to 16, "seventeen" to 17,
+            "eighteen" to 18, "nineteen" to 19, "twenty" to 20, "thirty" to 30,
+            "forty" to 40, "fifty" to 50
+        )
+
+        val singleDigitWords = mapOf(
+            "one" to 1, "two" to 2, "three" to 3, "four" to 4,
+            "five" to 5, "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9
+        )
+
+        // Try to find "[at/for] [hour]" pattern first (supports both "at" and "for")
+        // Use word boundaries \b to match whole words only (e.g., "seven" but not "seventeen")
+        val atOrForHourPattern = """(?:at|for)\s+\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b""".toRegex()
+        atOrForHourPattern.find(text)?.let { match ->
+            val hourWord = match.groupValues[1]
+            val hour = hourWords[hourWord] ?: return@let
+
+            // Now look for minutes after the hour
+            val remainingText = text.substring(match.range.last + 1)
+            var minute = 0
+
+            // Check for compound minutes like "twenty five", "forty five"
+            for ((tensWord, tensValue) in minuteWords) {
+                if (remainingText.contains(tensWord)) {
+                    minute = tensValue
+                    // Check if there's a single digit after it
+                    for ((digitWord, digitValue) in singleDigitWords) {
+                        if (remainingText.contains("$tensWord $digitWord") ||
+                            remainingText.contains("$tensWord$digitWord")) {
+                            minute += digitValue
+                            break
+                        }
+                    }
+                    break
+                }
+            }
+
+            // If no tens found, check for single digit minutes
+            if (minute == 0) {
+                for ((digitWord, digitValue) in singleDigitWords) {
+                    if (remainingText.trim().startsWith(digitWord)) {
+                        minute = digitValue
+                        break
+                    }
+                }
+            }
+
+            // Check for AM/PM after minutes
+            val adjustedHour = when {
+                remainingText.contains("pm") || remainingText.contains("evening") || remainingText.contains("night") -> {
+                    if (hour == 12) 12 else hour + 12
+                }
+                remainingText.contains("am") || remainingText.contains("morning") -> {
+                    if (hour == 12) 0 else hour
+                }
+                else -> hour // Default to as-is if no AM/PM specified
+            }
+
+            if (minute in 0..59 && adjustedHour in 0..23) {
+                return LocalTime.of(adjustedHour, minute)
+            }
+        }
+
+        // Pattern 4: Fallback - just look for hour words
+        for ((word, number) in hourWords) {
+            if (text.contains("$word o'clock") || text.contains(" $word ")) {
                 val minute = when {
                     text.contains("thirty") -> 30
                     text.contains("fifteen") || text.contains("quarter") -> 15

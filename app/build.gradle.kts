@@ -163,6 +163,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.9")
     testImplementation("app.cash.turbine:turbine:1.0.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("com.google.truth:truth:1.1.5")
 
     // Testing - Android Instrumentation
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
