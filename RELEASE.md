@@ -90,24 +90,83 @@ Add release notes under `## [Unreleased]` section:
 
 ### 4. Sign APK with Release Keystore
 
+**⚠️ SECURITY WARNING:** Never use `--ks-pass pass:"password"` in command line!
+- Passwords appear in shell history (`.bash_history`, `.zsh_history`)
+- Passwords visible in process list (`ps aux`)
+- May be logged to system logs
+
+#### Method 1: Interactive Prompt (RECOMMENDED)
+
 ```bash
 # Set Java environment
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
-# Sign APK
+# Sign APK - will prompt for password
 ~/Library/Android/sdk/build-tools/34.0.0/apksigner sign \
   --ks voicebell-release.keystore \
   --ks-key-alias voicebell \
-  --ks-pass pass:"VoiceBell2025!Secure" \
-  --key-pass pass:"VoiceBell2025!Secure" \
   --out VoiceBell-0.1.10.apk \
   app/build/outputs/apk/release/app-release-unsigned.apk
+
+# You will be prompted:
+# Keystore password for signer #1:
+# (type: VoiceBell2025!Secure)
 ```
 
-**IMPORTANT:** Never put passwords in shell history! Use one of these methods:
-- Store password in environment variable: `--ks-pass env:KEYSTORE_PASS`
-- Use interactive prompt: `--ks-pass stdin` (then type password)
-- Or use a secure script
+#### Method 2: Environment Variable
+
+```bash
+# Set password in environment (won't appear in history)
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export KEYSTORE_PASSWORD="VoiceBell2025!Secure"
+
+# Sign APK using environment variable
+~/Library/Android/sdk/build-tools/34.0.0/apksigner sign \
+  --ks voicebell-release.keystore \
+  --ks-key-alias voicebell \
+  --ks-pass env:KEYSTORE_PASSWORD \
+  --key-pass env:KEYSTORE_PASSWORD \
+  --out VoiceBell-0.1.10.apk \
+  app/build/outputs/apk/release/app-release-unsigned.apk
+
+# Clear password from environment
+unset KEYSTORE_PASSWORD
+```
+
+#### Method 3: Secure Script (Best for Automation)
+
+Create `sign-release.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+# Prompt for password securely (won't show in terminal)
+read -s -p "Keystore password: " KEYSTORE_PASSWORD
+echo ""
+
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+
+~/Library/Android/sdk/build-tools/34.0.0/apksigner sign \
+  --ks voicebell-release.keystore \
+  --ks-key-alias voicebell \
+  --ks-pass env:KEYSTORE_PASSWORD \
+  --key-pass env:KEYSTORE_PASSWORD \
+  --out "$1" \
+  app/build/outputs/apk/release/app-release-unsigned.apk
+
+# Clear password from memory
+unset KEYSTORE_PASSWORD
+
+echo "APK signed successfully: $1"
+```
+
+Make executable and use:
+
+```bash
+chmod +x sign-release.sh
+./sign-release.sh VoiceBell-0.1.10.apk
+```
 
 ### 5. Verify APK Signature
 
@@ -267,17 +326,35 @@ If setting up automated builds:
 
 ## Quick Reference
 
+### Using sign-release.sh script (RECOMMENDED)
+
 ```bash
-# Complete release process (one-liner)
-./gradlew clean assembleRelease && \
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" && \
+# 1. Build
+./gradlew clean assembleRelease
+
+# 2. Sign (will prompt for password)
+./sign-release.sh VoiceBell-$(grep versionName app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/').apk
+
+# 3. Test & Release
+adb install -r VoiceBell-*.apk
+git commit -m "release: version X.Y.Z"
+gh release create vX.Y.Z --title "..." --notes "..." VoiceBell-*.apk
+```
+
+### Manual process (if script not available)
+
+```bash
+# Build
+./gradlew clean assembleRelease
+
+# Sign (interactive - will prompt for password)
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ~/Library/Android/sdk/build-tools/34.0.0/apksigner sign \
   --ks voicebell-release.keystore \
   --ks-key-alias voicebell \
-  --ks-pass pass:"VoiceBell2025!Secure" \
-  --key-pass pass:"VoiceBell2025!Secure" \
-  --out VoiceBell-$(grep versionName app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/').apk \
+  --out VoiceBell-0.1.10.apk \
   app/build/outputs/apk/release/app-release-unsigned.apk
+# (Enter password when prompted: VoiceBell2025!Secure)
 ```
 
 ## Additional Resources
