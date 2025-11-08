@@ -4,6 +4,8 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    id("jacoco")
+    id("app.cash.paparazzi") version "1.3.4"
 }
 
 android {
@@ -17,7 +19,7 @@ android {
         versionCode = 10
         versionName = "0.1.9"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.voicebell.clock.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -68,6 +70,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
 
             // Use release signing for debug builds too (for consistent updates)
             if (signingConfigs.getByName("release").storeFile != null) {
@@ -171,4 +175,64 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.work:work-testing:2.9.0")
     androidTestImplementation("androidx.room:room-testing:2.6.1")
+    androidTestImplementation("com.google.truth:truth:1.4.4")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.50")
+    kspAndroidTest("com.google.dagger:hilt-compiler:2.50")
+}
+
+// JaCoCo Test Coverage Configuration
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    group = "Reporting"
+    description = "Generate JaCoCo coverage reports for Debug build"
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        "**/di/**",
+        "**/hilt_aggregated_deps/**",
+        "**/*_Hilt*.*",
+        "**/*_Factory.*",
+        "**/*_MembersInjector.*",
+        "**/*Module_Provide*.*"
+    )
+
+    val debugTree = fileTree("${project.buildDir}/intermediates/javac/debug/classes") {
+        exclude(fileFilter)
+    }
+    val kotlinDebugTree = fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+    }
+
+    classDirectories.setFrom(files(listOf(debugTree, kotlinDebugTree)))
+    sourceDirectories.setFrom(files("${project.projectDir}/src/main/java"))
+    executionData.setFrom(fileTree(project.buildDir) {
+        include("**/*.exec", "**/*.ec")
+    })
+}
+
+// Combined coverage task with better reporting
+tasks.register("coverageReport") {
+    group = "Reporting"
+    description = "Generate combined test coverage report"
+    dependsOn("jacocoTestReport")
+
+    doLast {
+        val reportPath = "${project.buildDir}/reports/jacoco/jacocoTestReport/html/index.html"
+        println("📊 Coverage report generated:")
+        println("   file://${reportPath}")
+        println("")
+        println("Run: open ${reportPath}")
+    }
 }

@@ -86,10 +86,16 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
             val label = command.label ?: "Voice Timer"
 
             Log.d(TAG, "Starting timer for ${command.durationMillis}ms")
-            startTimerUseCase(
+            val result = startTimerUseCase(
                 durationMillis = command.durationMillis,
                 label = label
             )
+
+            if (result.isFailure) {
+                val error = result.exceptionOrNull()
+                Log.e(TAG, "Failed to start timer", error)
+                return CommandExecutionResult.Error(error?.message ?: "Failed to start timer")
+            }
 
             val message = buildTimerConfirmationMessage(command)
             CommandExecutionResult.Success(message)

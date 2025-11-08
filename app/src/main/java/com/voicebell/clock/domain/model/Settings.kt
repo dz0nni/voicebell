@@ -5,7 +5,7 @@ package com.voicebell.clock.domain.model
  * Represents user preferences for UI and alarm behavior.
  */
 data class Settings(
-    val uiMode: UiMode = UiMode.CLASSIC,
+    val uiMode: UiMode = UiMode.EXPERIMENTAL,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val use24HourFormat: Boolean = true,
     val defaultSnoozeDuration: Int = 10,

@@ -74,7 +74,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isDownloadingModel = true, modelDownloadProgress = 0f) }
 
-            voskModelManager.downloadModel { progress ->
+            voskModelManager.extractModelFromAssets { progress ->
                 _state.update { it.copy(modelDownloadProgress = progress) }
             }.onSuccess {
                 _state.update {
