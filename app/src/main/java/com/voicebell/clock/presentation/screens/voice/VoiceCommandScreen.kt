@@ -13,8 +13,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
@@ -113,53 +118,28 @@ fun VoiceCommandScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Instruction text
-            Text(
-                text = if (state.isListening) {
-                    "Listening... Speak now"
-                } else {
-                    "Tap to start listening"
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.SemiBold
+            // Log area (scrollable, takes remaining space)
+            ProcessLogArea(
+                logs = state.logMessages,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Microphone button with animation
-            PushToTalkButton(
-                isListening = state.isListening,
-                enabled = hasAudioPermission,
-                onStartListening = {
-                    if (hasAudioPermission) {
-                        viewModel.onEvent(VoiceCommandEvent.StartListening)
-                        VoiceRecognitionService.startListening(context)
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }
-                },
-                onStopListening = {
-                    viewModel.onEvent(VoiceCommandEvent.StopListening)
-                    VoiceRecognitionService.stopListening(context)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Result text
+            // Result text (below logs)
             AnimatedVisibility(
                 visible = state.resultText.isNotEmpty(),
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (state.isSuccess) {
                             MaterialTheme.colorScheme.primaryContainer
@@ -184,28 +164,173 @@ fun VoiceCommandScreen(
 
             // Permission prompt
             if (!hasAudioPermission) {
-                Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Microphone permission is required for voice commands",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Microphone permission is required",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
 
-            // Examples
-            Spacer(modifier = Modifier.height(48.dp))
-            Text(
-                text = "Try saying:",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Instruction text (above mic button)
             Text(
-                text = "• \"Set alarm for 7 AM\"\n• \"Set timer for 5 minutes\"\n• \"Wake me up at 6:30\"",
-                style = MaterialTheme.typography.bodyMedium,
+                text = if (state.isListening) {
+                    "Listening... Speak now"
+                } else {
+                    "Tap to start"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Microphone button (fixed at bottom)
+            PushToTalkButton(
+                isListening = state.isListening,
+                enabled = hasAudioPermission,
+                onStartListening = {
+                    if (hasAudioPermission) {
+                        viewModel.onEvent(VoiceCommandEvent.StartListening)
+                        VoiceRecognitionService.startListening(context)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onStopListening = {
+                    viewModel.onEvent(VoiceCommandEvent.StopListening)
+                    VoiceRecognitionService.stopListening(context)
+                },
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            // Examples (compact, at very bottom)
+            Text(
+                text = "Try: \"Set alarm for 7 AM\" or \"Set timer for 5 minutes\"",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Process log area showing recognition and parsing steps.
+ */
+@Composable
+private fun ProcessLogArea(
+    logs: List<LogMessage>,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom when new logs arrive
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty()) {
+            listState.animateScrollToItem(logs.size - 1)
+        }
+    }
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        if (logs.isEmpty()) {
+            // Empty state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Process log",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Voice recognition steps will appear here",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            // Log messages
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(logs) { log ->
+                    LogMessageItem(log)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Single log message item.
+ */
+@Composable
+private fun LogMessageItem(
+    log: LogMessage,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = when (log.type) {
+        LogType.INFO -> MaterialTheme.colorScheme.surfaceVariant
+        LogType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        LogType.ERROR -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+        LogType.PROCESSING -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+    }
+
+    val textColor = when (log.type) {
+        LogType.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+        LogType.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
+        LogType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
+        LogType.PROCESSING -> MaterialTheme.colorScheme.onTertiaryContainer
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Timestamp
+            Text(
+                text = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                    .format(java.util.Date(log.timestamp)),
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.7f),
+                modifier = Modifier.padding(end = 8.dp)
+            )
+
+            // Message
+            Text(
+                text = log.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                modifier = Modifier.weight(1f)
             )
         }
     }
