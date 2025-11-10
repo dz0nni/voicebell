@@ -231,10 +231,10 @@ private fun ProcessLogArea(
 ) {
     val listState = rememberLazyListState()
 
-    // Auto-scroll to bottom when new logs arrive
+    // Auto-scroll to top when new logs arrive (newest first)
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.size - 1)
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -269,7 +269,7 @@ private fun ProcessLogArea(
                 }
             }
         } else {
-            // Log messages
+            // Log messages (newest first)
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -277,7 +277,7 @@ private fun ProcessLogArea(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(logs) { log ->
+                items(logs.reversed()) { log ->
                     LogMessageItem(log)
                 }
             }

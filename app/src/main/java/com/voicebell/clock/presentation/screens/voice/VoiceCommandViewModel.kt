@@ -49,15 +49,22 @@ class VoiceCommandViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isListening = false,
-                        logMessages = it.logMessages + LogMessage(
-                            message = "⏸️ Stopped listening",
-                            type = LogType.INFO
+                        logMessages = it.logMessages + listOf(
+                            LogMessage(
+                                message = "⏸️ Stopped listening",
+                                type = LogType.INFO
+                            ),
+                            LogMessage(
+                                message = "🔄 Processing audio...",
+                                type = LogType.PROCESSING
+                            )
                         )
                     )
                 }
             }
             is VoiceCommandEvent.RecognitionResult -> {
-                addLog("✅ Recognized: \"${event.text}\"", LogType.SUCCESS)
+                addLog("🎤 Speech recognized: \"${event.text}\"", LogType.SUCCESS)
+                addLog("⚙️ Processing command...", LogType.PROCESSING)
                 executeCommand(event.text)
             }
             is VoiceCommandEvent.ShowError -> {

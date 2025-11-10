@@ -54,9 +54,6 @@ class VoiceRecognitionService : Service() {
     @Inject
     lateinit var voskModelManager: com.voicebell.clock.util.VoskModelManager
 
-    @Inject
-    lateinit var executeVoiceCommand: com.voicebell.clock.domain.usecase.voice.ExecuteVoiceCommandUseCase
-
     private var audioRecord: AudioRecord? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var recordingJob: Job? = null
@@ -376,26 +373,9 @@ class VoiceRecognitionService : Service() {
 
             Log.i(TAG, "Recognized text: $text")
 
-            // Execute voice command
-            serviceScope.launch {
-                try {
-                    val result = executeVoiceCommand(text)
-
-                    when (result) {
-                        is com.voicebell.clock.domain.usecase.voice.CommandExecutionResult.Success -> {
-                            Log.i(TAG, "Command executed successfully: ${result.message}")
-                            broadcastResult(text, true, null)
-                        }
-                        is com.voicebell.clock.domain.usecase.voice.CommandExecutionResult.Error -> {
-                            Log.e(TAG, "Command execution failed: ${result.message}")
-                            broadcastResult(text, false, result.message)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error executing command", e)
-                    broadcastResult(text, false, "Failed to execute command: ${e.message}")
-                }
-            }
+            // Broadcast recognized text to UI for processing
+            // UI (ViewModel) will parse and execute the command
+            broadcastResult(text, true, null)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing result", e)
