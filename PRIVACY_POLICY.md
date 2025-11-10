@@ -292,7 +292,6 @@ For California residents:
 
 If you have questions about this Privacy Policy or VoiceBell's privacy practices:
 
-- **Email**: [your-email@example.com]
 - **GitHub Issues**: [github.com/dz0nni/voicebell/issues](https://github.com/dz0nni/voicebell/issues)
 - **GitHub Discussions**: [github.com/dz0nni/voicebell/discussions](https://github.com/dz0nni/voicebell/discussions)
 

@@ -162,8 +162,8 @@ Create `metadata/com.voicebell.clock.yml`:
 Categories:
   - Time
 License: GPL-3.0-or-later
-AuthorName: Your Name
-AuthorEmail: your.email@example.com
+AuthorName: dz0nni
+# AuthorEmail: (Optional - use GitHub Issues instead)
 WebSite: https://github.com/dz0nni/voicebell
 SourceCode: https://github.com/dz0nni/voicebell
 IssueTracker: https://github.com/dz0nni/voicebell/issues

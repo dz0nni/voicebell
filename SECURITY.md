@@ -43,14 +43,10 @@ Report any issues that could compromise:
 
 Instead, report privately via:
 
-1. **Email**: [your-security-email@example.com]
-   - Subject: `[SECURITY] VoiceBell Vulnerability Report`
-   - Include: Detailed description, steps to reproduce, impact assessment
-
-2. **GitHub Security Advisory** (Preferred):
-   - Go to: https://github.com/dz0nni/voicebell/security/advisories
-   - Click "Report a vulnerability"
-   - Fill in the advisory form
+**GitHub Security Advisory**:
+- Go to: https://github.com/dz0nni/voicebell/security/advisories
+- Click "Report a vulnerability"
+- Fill in the advisory form with detailed information
 
 ### What to Include
 
@@ -223,11 +219,11 @@ However, we deeply appreciate security research and will:
 
 ## Contact
 
-**Security issues**: [your-security-email@example.com]
+**Security vulnerabilities**: Use [GitHub Security Advisory](https://github.com/dz0nni/voicebell/security/advisories) (private reporting)
 
-**General questions**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
+**General questions & bug reports**: [GitHub Issues](https://github.com/dz0nni/voicebell/issues)
 
-**PGP Key**: [Optional: Include PGP key fingerprint]
+**Feature requests & discussions**: [GitHub Discussions](https://github.com/dz0nni/voicebell/discussions)
 
 ---
 
