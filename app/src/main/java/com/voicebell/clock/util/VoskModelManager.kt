@@ -7,18 +7,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manager for downloading and installing Vosk speech recognition model.
+ * Manager for extracting and installing Vosk speech recognition model.
  *
- * The model is ~40MB and downloaded on first use to keep APK size small.
- * Supports offline-first architecture as per the original plan.
+ * The model is ~40MB bundled in APK assets and extracted on first use.
+ * Supports 100% offline architecture as per the original plan.
  */
 @Singleton
 class VoskModelManager @Inject constructor(
@@ -28,13 +25,9 @@ class VoskModelManager @Inject constructor(
     companion object {
         private const val TAG = "VoskModelManager"
 
-        // Vosk model details
+        // Vosk model details (bundled in APK assets)
         private const val MODEL_NAME = "vosk-model-small-en-us-0.15"
-        private const val MODEL_URL = "https://alphacephei.com/vosk/models/$MODEL_NAME.zip"
         private const val MODEL_DIR_NAME = "vosk-model"
-
-        // Alternative: Include model in assets (uncomment if bundling in APK)
-        // private const val MODEL_ASSET_NAME = "vosk-model-small-en-us-0.15"
     }
 
     private val modelDir = File(context.filesDir, MODEL_DIR_NAME)
@@ -63,83 +56,7 @@ class VoskModelManager @Inject constructor(
     }
 
     /**
-     * Download and extract Vosk model from the internet.
-     *
-     * @param onProgress Callback for download progress (0.0 to 1.0)
-     * @return Result indicating success or failure
-     */
-    suspend fun downloadModel(
-        onProgress: (Float) -> Unit = {}
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            Log.i(TAG, "Starting model download from $MODEL_URL")
-
-            // Create model directory if it doesn't exist
-            if (!modelDir.exists()) {
-                modelDir.mkdirs()
-            }
-
-            // Download ZIP file
-            val url = URL(MODEL_URL)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connect()
-
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                return@withContext Result.failure(
-                    Exception("Server returned HTTP ${connection.responseCode}")
-                )
-            }
-
-            val fileLength = connection.contentLength
-            Log.d(TAG, "File size: ${fileLength / 1024 / 1024} MB")
-
-            // Download with progress tracking
-            connection.inputStream.use { input ->
-                val tempZipFile = File(context.cacheDir, "$MODEL_NAME.zip")
-                FileOutputStream(tempZipFile).use { output ->
-                    val buffer = ByteArray(8192)
-                    var totalBytesRead = 0L
-                    var bytesRead: Int
-
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-
-                        if (fileLength > 0) {
-                            val progress = totalBytesRead.toFloat() / fileLength
-                            onProgress(progress * 0.7f) // 70% for download
-                        }
-                    }
-                }
-
-                // Extract ZIP
-                Log.d(TAG, "Extracting model...")
-                extractZip(tempZipFile, modelDir) { extractProgress ->
-                    onProgress(0.7f + extractProgress * 0.3f) // 30% for extraction
-                }
-
-                // Clean up temp file
-                tempZipFile.delete()
-            }
-
-            Log.i(TAG, "Model downloaded and extracted successfully")
-            Result.success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to download model", e)
-
-            // Clean up on failure
-            if (modelDir.exists()) {
-                modelDir.deleteRecursively()
-            }
-
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Extract Vosk model from assets (if bundled in APK).
-     * Alternative to downloading from internet.
+     * Extract Vosk model from bundled APK assets.
      *
      * @param onProgress Callback for extraction progress (0.0 to 1.0)
      * @return Result indicating success or failure

@@ -498,7 +498,7 @@ private fun VoiceModelDownloadButton(
                         text = if (isModelDownloaded) {
                             "Model installed (~40 MB)"
                         } else {
-                            "Download required (~40 MB)"
+                            "Setup required (~40 MB)"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -527,7 +527,7 @@ private fun VoiceModelDownloadButton(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Download")
+                            Text("Setup")
                         }
                     }
                 }
