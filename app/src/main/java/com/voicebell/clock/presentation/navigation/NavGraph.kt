@@ -10,10 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.voicebell.clock.presentation.screens.alarm.AlarmScreen
 import com.voicebell.clock.presentation.screens.alarm.edit.AlarmEditScreen
@@ -21,6 +24,7 @@ import com.voicebell.clock.presentation.screens.home.MainScreen
 import com.voicebell.clock.presentation.screens.settings.SettingsScreen
 import com.voicebell.clock.presentation.screens.timer.TimerScreen
 import com.voicebell.clock.presentation.screens.voice.VoiceCommandScreen
+import com.voicebell.clock.presentation.screens.voice.VoiceCommandViewModel
 import com.voicebell.clock.presentation.screens.worldclock.WorldClocksScreen
 import com.voicebell.clock.presentation.stopwatch.StopwatchScreen
 
@@ -32,6 +36,10 @@ fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    // Create shared ViewModel for Voice Command screen at NavGraph level
+    // This keeps the ViewModel alive across navigation
+    val voiceCommandViewModel: VoiceCommandViewModel = hiltViewModel()
+
     NavHost(
         navController = navController,
         startDestination = Routes.Home.route,
@@ -143,6 +151,7 @@ fun NavGraph(
         // Voice Command screen
         composable(Routes.VoiceCommand.route) {
             VoiceCommandScreen(
+                viewModel = voiceCommandViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
                 }

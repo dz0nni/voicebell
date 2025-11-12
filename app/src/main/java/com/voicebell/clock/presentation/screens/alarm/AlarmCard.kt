@@ -57,7 +57,6 @@ fun AlarmCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onEdit() }
                 .padding(16.dp)
         ) {
             // Top row: Time and toggle switch
@@ -66,7 +65,7 @@ fun AlarmCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Time display
+                // Time display (clickable to edit)
                 Text(
                     text = alarm.getFormattedTime(),
                     style = MaterialTheme.typography.displaySmall,
@@ -75,7 +74,8 @@ fun AlarmCard(
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    }
+                    },
+                    modifier = Modifier.clickable { onEdit() }
                 )
 
                 // Enable/disable switch

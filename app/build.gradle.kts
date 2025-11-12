@@ -4,6 +4,7 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    id("kotlin-parcelize")
     id("jacoco")
     id("app.cash.paparazzi") version "1.3.4"
 }

@@ -1,7 +1,10 @@
 package com.voicebell.clock.presentation.screens.voice
 
+import android.os.Parcelable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.voicebell.clock.domain.usecase.timer.GetActiveTimerUseCase
 import com.voicebell.clock.domain.usecase.voice.ExecuteVoiceCommandUseCase
 import com.voicebell.clock.domain.usecase.voice.CommandExecutionResult
 import com.voicebell.clock.util.VoiceCommandParser
@@ -10,8 +13,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
 /**
@@ -21,47 +27,59 @@ import javax.inject.Inject
  * - Voice recognition state
  * - Command execution
  * - Result display
+ * - Active timer monitoring
+ * - State persistence (survives navigation)
  */
 @HiltViewModel
 class VoiceCommandViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val executeVoiceCommandUseCase: ExecuteVoiceCommandUseCase,
-    private val voiceCommandParser: VoiceCommandParser
+    private val voiceCommandParser: VoiceCommandParser,
+    private val getActiveTimerUseCase: GetActiveTimerUseCase
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(VoiceCommandState())
+    companion object {
+        private const val KEY_RESULT_TEXT = "result_text"
+        private const val KEY_IS_SUCCESS = "is_success"
+        private const val KEY_LOG_MESSAGES = "log_messages"
+        private const val MAX_LOG_MESSAGES = 30
+    }
+
+    private val _state = MutableStateFlow(
+        VoiceCommandState(
+            resultText = savedStateHandle.get<String>(KEY_RESULT_TEXT) ?: "",
+            isSuccess = savedStateHandle.get<Boolean>(KEY_IS_SUCCESS) ?: true,
+            logMessages = savedStateHandle.get<List<LogMessage>>(KEY_LOG_MESSAGES) ?: emptyList()
+        )
+    )
     val state: StateFlow<VoiceCommandState> = _state.asStateFlow()
+
+    init {
+        // Observe active timer for countdown display
+        getActiveTimerUseCase()
+            .onEach { activeTimers ->
+                val activeTimer = activeTimers.firstOrNull()
+                _state.update { it.copy(activeTimer = activeTimer) }
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun onEvent(event: VoiceCommandEvent) {
         android.util.Log.d("VoiceCommandViewModel", "Received event: $event")
         when (event) {
             is VoiceCommandEvent.StartListening -> {
-                _state.update {
+                updateState {
                     it.copy(
                         isListening = true,
-                        resultText = "",
-                        logMessages = it.logMessages + LogMessage(
-                            message = "🎤 Started listening...",
-                            type = LogType.INFO
-                        )
+                        resultText = ""
                     )
                 }
+                addLog("🎤 Started listening...", LogType.INFO)
             }
             is VoiceCommandEvent.StopListening -> {
-                _state.update {
-                    it.copy(
-                        isListening = false,
-                        logMessages = it.logMessages + listOf(
-                            LogMessage(
-                                message = "⏸️ Stopped listening",
-                                type = LogType.INFO
-                            ),
-                            LogMessage(
-                                message = "🔄 Processing audio...",
-                                type = LogType.PROCESSING
-                            )
-                        )
-                    )
-                }
+                updateState { it.copy(isListening = false) }
+                addLog("⏸️ Stopped listening", LogType.INFO)
+                addLog("🔄 Processing audio...", LogType.PROCESSING)
             }
             is VoiceCommandEvent.RecognitionResult -> {
                 addLog("🎤 Speech recognized: \"${event.text}\"", LogType.SUCCESS)
@@ -69,30 +87,46 @@ class VoiceCommandViewModel @Inject constructor(
                 executeCommand(event.text)
             }
             is VoiceCommandEvent.ShowError -> {
-                _state.update {
+                updateState {
                     it.copy(
                         isListening = false,
                         resultText = event.message,
-                        isSuccess = false,
-                        logMessages = it.logMessages + LogMessage(
-                            message = "❌ Error: ${event.message}",
-                            type = LogType.ERROR
-                        )
+                        isSuccess = false
                     )
                 }
+                addLog("❌ Error: ${event.message}", LogType.ERROR)
             }
         }
     }
 
     private fun addLog(message: String, type: LogType = LogType.INFO) {
         _state.update {
-            it.copy(logMessages = it.logMessages + LogMessage(message = message, type = type))
+            val newLogs = (it.logMessages + LogMessage(message = message, type = type))
+                .takeLast(MAX_LOG_MESSAGES) // Keep only last 30 messages
+
+            // Save to savedStateHandle
+            savedStateHandle[KEY_LOG_MESSAGES] = newLogs
+
+            it.copy(logMessages = newLogs)
+        }
+    }
+
+    private fun updateState(update: (VoiceCommandState) -> VoiceCommandState) {
+        _state.update { currentState ->
+            val newState = update(currentState)
+
+            // Save critical state to savedStateHandle
+            savedStateHandle[KEY_RESULT_TEXT] = newState.resultText
+            savedStateHandle[KEY_IS_SUCCESS] = newState.isSuccess
+            savedStateHandle[KEY_LOG_MESSAGES] = newState.logMessages.takeLast(MAX_LOG_MESSAGES)
+
+            newState
         }
     }
 
     private fun executeCommand(recognizedText: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isListening = false) }
+            updateState { it.copy(isListening = false) }
 
             addLog("🔍 Parsing command...", LogType.PROCESSING)
 
@@ -136,7 +170,7 @@ class VoiceCommandViewModel @Inject constructor(
             when (result) {
                 is CommandExecutionResult.Success -> {
                     addLog("✅ ${result.message}", LogType.SUCCESS)
-                    _state.update {
+                    updateState {
                         it.copy(
                             resultText = result.message,
                             isSuccess = true
@@ -145,7 +179,7 @@ class VoiceCommandViewModel @Inject constructor(
                 }
                 is CommandExecutionResult.Error -> {
                     addLog("❌ ${result.message}", LogType.ERROR)
-                    _state.update {
+                    updateState {
                         it.copy(
                             resultText = result.message,
                             isSuccess = false
@@ -164,19 +198,22 @@ data class VoiceCommandState(
     val isListening: Boolean = false,
     val resultText: String = "",
     val isSuccess: Boolean = true,
-    val logMessages: List<LogMessage> = emptyList()
+    val logMessages: List<LogMessage> = emptyList(),
+    val activeTimer: com.voicebell.clock.domain.model.Timer? = null
 )
 
 /**
  * Log message for debugging voice recognition process.
  */
+@Parcelize
 data class LogMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val message: String,
     val type: LogType = LogType.INFO
-)
+) : Parcelable
 
-enum class LogType {
+@Parcelize
+enum class LogType : Parcelable {
     INFO,     // General info (blue/gray)
     SUCCESS,  // Success step (green)
     ERROR,    // Error step (red)

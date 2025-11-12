@@ -1,13 +1,17 @@
 package com.voicebell.clock.domain.usecase.voice
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.voicebell.clock.domain.model.Alarm
 import com.voicebell.clock.domain.model.AlarmTone
 import com.voicebell.clock.domain.model.DayOfWeek
 import com.voicebell.clock.domain.usecase.alarm.CreateAlarmUseCase
 import com.voicebell.clock.domain.usecase.timer.StartTimerUseCase
+import com.voicebell.clock.service.TimerService
 import com.voicebell.clock.util.VoiceCommandParser
 import com.voicebell.clock.util.VoiceCommandResult
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -23,6 +27,7 @@ import javax.inject.Inject
  * Based on the original architecture plan.
  */
 class ExecuteVoiceCommandUseCase @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val voiceCommandParser: VoiceCommandParser,
     private val createAlarmUseCase: CreateAlarmUseCase,
     private val startTimerUseCase: StartTimerUseCase
@@ -96,6 +101,21 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
                 Log.e(TAG, "Failed to start timer", error)
                 return CommandExecutionResult.Error(error?.message ?: "Failed to start timer")
             }
+
+            // Get the timer ID from the result
+            val timerId = result.getOrNull()
+            if (timerId == null) {
+                Log.e(TAG, "Timer ID is null after creation")
+                return CommandExecutionResult.Error("Failed to start timer")
+            }
+
+            // Start TimerService to monitor the timer
+            Log.d(TAG, "Starting TimerService for timer ID: $timerId")
+            val intent = Intent(context, TimerService::class.java).apply {
+                action = TimerService.ACTION_START
+                putExtra(TimerService.EXTRA_TIMER_ID, timerId)
+            }
+            context.startForegroundService(intent)
 
             val message = buildTimerConfirmationMessage(command)
             CommandExecutionResult.Success(message)

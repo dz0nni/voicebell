@@ -292,19 +292,71 @@ class VoiceCommandParser @Inject constructor() {
             totalMillis += seconds * 1000
         }
 
-        // Word numbers
-        val wordDurations = mapOf(
-            "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
-            "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10,
-            "fifteen" to 15, "twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50
+        // Word numbers - parse compound numbers like "seventy five"
+        val tensWords = mapOf(
+            "twenty" to 20, "thirty" to 30, "forty" to 40,
+            "fifty" to 50, "sixty" to 60, "seventy" to 70,
+            "eighty" to 80, "ninety" to 90
         )
 
-        for ((word, number) in wordDurations) {
-            when {
-                text.contains("$word hour") -> totalMillis += number * 3600000L
-                text.contains("$word minute") -> totalMillis += number * 60000L
-                text.contains("$word second") -> totalMillis += number * 1000L
+        val onesWords = mapOf(
+            "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
+            "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9
+        )
+
+        val teensWords = mapOf(
+            "ten" to 10, "eleven" to 11, "twelve" to 12, "thirteen" to 13,
+            "fourteen" to 14, "fifteen" to 15, "sixteen" to 16, "seventeen" to 17,
+            "eighteen" to 18, "nineteen" to 19
+        )
+
+        // Helper function to extract number before a time unit
+        fun extractNumberBeforeUnit(unit: String): Int? {
+            // Look for pattern: "[number words] unit"
+            // Try compound numbers first (e.g., "seventy five seconds")
+            for ((tensWord, tensValue) in tensWords) {
+                for ((onesWord, onesValue) in onesWords) {
+                    if (text.contains("$tensWord $onesWord $unit") ||
+                        text.contains("$tensWord$onesWord $unit")) {
+                        return tensValue + onesValue
+                    }
+                }
+                // Just tens (e.g., "seventy seconds")
+                if (text.contains("$tensWord $unit")) {
+                    return tensValue
+                }
             }
+
+            // Try teens (e.g., "fifteen seconds")
+            for ((teenWord, teenValue) in teensWords) {
+                if (text.contains("$teenWord $unit")) {
+                    return teenValue
+                }
+            }
+
+            // Try ones (e.g., "five seconds")
+            for ((onesWord, onesValue) in onesWords) {
+                if (text.contains("$onesWord $unit")) {
+                    return onesValue
+                }
+            }
+
+            return null
+        }
+
+        // Extract hours in words
+        extractNumberBeforeUnit("hour")?.let { hours ->
+            totalMillis += hours * 3600000L
+        }
+
+        // Extract minutes in words
+        extractNumberBeforeUnit("minute")?.let { minutes ->
+            totalMillis += minutes * 60000L
+        }
+
+        // Extract seconds in words
+        extractNumberBeforeUnit("second")?.let { seconds ->
+            totalMillis += seconds * 1000L
         }
 
         return if (totalMillis > 0) totalMillis else null
