@@ -79,25 +79,32 @@ fun VoiceCommandScreen(
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                android.util.Log.d("VoiceCommandScreen", "Broadcast received! Action: ${intent?.action}")
                 val text = intent?.getStringExtra(VoiceRecognitionService.EXTRA_RESULT_TEXT)
                 val success = intent?.getBooleanExtra(VoiceRecognitionService.EXTRA_RESULT_SUCCESS, false) ?: false
+                android.util.Log.d("VoiceCommandScreen", "Text: $text, Success: $success")
 
                 if (success && text != null) {
+                    android.util.Log.d("VoiceCommandScreen", "Sending RecognitionResult event to ViewModel")
                     viewModel.onEvent(VoiceCommandEvent.RecognitionResult(text))
                 } else {
+                    android.util.Log.d("VoiceCommandScreen", "Sending ShowError event to ViewModel")
                     viewModel.onEvent(VoiceCommandEvent.ShowError(text ?: "Recognition failed"))
                 }
             }
         }
 
         val filter = IntentFilter(VoiceRecognitionService.ACTION_RESULT)
+        android.util.Log.d("VoiceCommandScreen", "Registering receiver with filter: ${VoiceRecognitionService.ACTION_RESULT}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             context.registerReceiver(receiver, filter)
         }
+        android.util.Log.d("VoiceCommandScreen", "Receiver registered successfully")
 
         onDispose {
+            android.util.Log.d("VoiceCommandScreen", "Unregistering receiver")
             context.unregisterReceiver(receiver)
         }
     }

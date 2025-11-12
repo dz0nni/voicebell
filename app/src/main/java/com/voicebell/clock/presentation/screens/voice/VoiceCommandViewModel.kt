@@ -32,6 +32,7 @@ class VoiceCommandViewModel @Inject constructor(
     val state: StateFlow<VoiceCommandState> = _state.asStateFlow()
 
     fun onEvent(event: VoiceCommandEvent) {
+        android.util.Log.d("VoiceCommandViewModel", "Received event: $event")
         when (event) {
             is VoiceCommandEvent.StartListening -> {
                 _state.update {

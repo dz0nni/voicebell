@@ -387,11 +387,15 @@ class VoiceRecognitionService : Service() {
      * Broadcast recognition result to the app.
      */
     private fun broadcastResult(text: String?, success: Boolean, errorMessage: String?) {
+        Log.d(TAG, "Broadcasting result - text: $text, success: $success, error: $errorMessage")
         val intent = Intent(ACTION_RESULT).apply {
+            // Make it explicit broadcast for Android 14+ compatibility
+            setPackage(packageName)
             putExtra(EXTRA_RESULT_TEXT, text ?: errorMessage ?: "Unknown error")
             putExtra(EXTRA_RESULT_SUCCESS, success)
         }
         sendBroadcast(intent)
+        Log.d(TAG, "Broadcast sent - action: $ACTION_RESULT, package: $packageName")
     }
 
     /**
