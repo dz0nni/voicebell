@@ -1,8 +1,9 @@
 package com.voicebell.clock.presentation.screens.home
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.voicebell.clock.domain.model.Alarm
@@ -35,10 +37,12 @@ fun ExperimentalHomeScreen(
     recentTimers: List<Timer>,
     onToggleAlarm: (Long, Boolean) -> Unit,
     onEditAlarm: (Long) -> Unit,
+    onDeleteAlarm: (Long) -> Unit,
     onRestartTimer: (Long) -> Unit,
+    onStopTimer: (Long) -> Unit,
+    onDeleteTimer: (Long) -> Unit,
     onEditTimer: (Long) -> Unit,
     onVoiceCommand: () -> Unit,
-    onStartStopwatch: () -> Unit,
     onCreateAlarm: () -> Unit,
     onCreateTimer: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -64,6 +68,28 @@ fun ExperimentalHomeScreen(
                     }
                 },
                 actions = {
+                    // Voice Command button
+                    IconButton(onClick = onVoiceCommand) {
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            tonalElevation = 4.dp
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Voice Command",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
+                    }
+                    // Settings button
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -112,6 +138,7 @@ fun ExperimentalHomeScreen(
                     CompactAlarmCard(
                         alarm = alarm,
                         onToggle = onToggleAlarm,
+                        onDelete = { onDeleteAlarm(alarm.id) },
                         onClick = { onEditAlarm(alarm.id) }
                     )
                 }
@@ -130,27 +157,16 @@ fun ExperimentalHomeScreen(
                     CompactTimerCard(
                         timer = timer,
                         onRestart = { onRestartTimer(timer.id) },
+                        onStop = { onStopTimer(timer.id) },
+                        onDelete = { onDeleteTimer(timer.id) },
                         onClick = { onEditTimer(timer.id) }
                     )
                 }
             }
 
-            // Large Voice Command Button
+            // Integrated Stopwatch Card
             item {
-                Spacer(modifier = Modifier.height(24.dp))
-
-                LargeVoiceCommandButton(
-                    onClick = onVoiceCommand,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // Quick Stopwatch Launch
-            item {
-                QuickStopwatchButton(
-                    onClick = onStartStopwatch,
+                IntegratedStopwatchCard(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -197,10 +213,36 @@ private fun SectionHeader(
 private fun CompactAlarmCard(
     alarm: Alarm,
     onToggle: (Long, Boolean) -> Unit,
+    onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Alarm?") },
+            text = { Text("This will permanently delete this alarm.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Card(
-        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (alarm.isEnabled) {
@@ -213,6 +255,13 @@ private fun CompactAlarmCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            showDeleteDialog = true
+                        }
+                    )
+                }
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -226,7 +275,8 @@ private fun CompactAlarmCard(
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    }
+                    },
+                    modifier = Modifier.clickable { onClick() }
                 )
                 if (alarm.label.isNotBlank()) {
                     Text(
@@ -246,30 +296,108 @@ private fun CompactAlarmCard(
 }
 
 /**
- * Compact timer card for recent timers
+ * Compact timer card for recent timers with real-time countdown
  */
 @Composable
 private fun CompactTimerCard(
     timer: Timer,
     onRestart: () -> Unit,
+    onStop: () -> Unit,
+    onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
+    // Real-time countdown update
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(timer.id, timer.isRunning) {
+        if (timer.isRunning && !timer.isPaused) {
+            while (true) {
+                currentTime = System.currentTimeMillis()
+                kotlinx.coroutines.delay(100)
+            }
+        }
+    }
+
+    val remainingMillis = if (timer.isRunning && !timer.isPaused) {
+        (timer.endTime - currentTime).coerceAtLeast(0)
+    } else {
+        timer.remainingMillis
+    }
+
+    val isTimerActive = timer.isRunning && !timer.isPaused
+    val borderColor = MaterialTheme.colorScheme.primary
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Timer?") },
+            text = { Text("This will permanently delete this timer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isTimerActive) 3.dp else 0.dp,
+            color = if (isTimerActive) borderColor else Color.Transparent
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isTimerActive) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable { onClick() }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            showDeleteDialog = true
+                        }
+                    )
+                }
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                // Show original duration if not active, otherwise show remaining time
+                val displayTime = if (isTimerActive) {
+                    formatMillisToTime(remainingMillis)
+                } else {
+                    formatMillisToTime(timer.durationMillis)
+                }
+
                 Text(
-                    text = formatDuration(timer.durationMillis),
+                    text = displayTime,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isTimerActive) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
                 if (timer.label.isNotBlank()) {
                     Text(
@@ -280,10 +408,11 @@ private fun CompactTimerCard(
                 }
             }
 
-            IconButton(onClick = onRestart) {
+            // Show Stop button when timer is active, Restart button when inactive
+            IconButton(onClick = if (isTimerActive) onStop else onRestart) {
                 Icon(
-                    imageVector = Icons.Default.Replay,
-                    contentDescription = "Restart timer",
+                    imageVector = if (isTimerActive) Icons.Default.Stop else Icons.Default.Replay,
+                    contentDescription = if (isTimerActive) "Stop timer" else "Restart timer",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -365,36 +494,137 @@ private fun LargeVoiceCommandButton(
 }
 
 /**
- * Quick stopwatch launch button at bottom
+ * Integrated stopwatch card with play/pause and reset functionality
  */
 @Composable
-private fun QuickStopwatchButton(
-    onClick: () -> Unit,
+private fun IntegratedStopwatchCard(
     modifier: Modifier = Modifier
 ) {
-    OutlinedCard(
-        onClick = onClick,
+    // Stopwatch state
+    var isRunning by remember { mutableStateOf(false) }
+    var elapsedMillis by remember { mutableStateOf(0L) }
+    var startTime by remember { mutableStateOf(0L) }
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    // Update elapsed time when running
+    LaunchedEffect(isRunning) {
+        if (isRunning) {
+            startTime = System.currentTimeMillis() - elapsedMillis
+            while (isRunning) {
+                elapsedMillis = System.currentTimeMillis() - startTime
+                kotlinx.coroutines.delay(10) // Update every 10ms for smooth display
+            }
+        }
+    }
+
+    // Animate card height - stays large when paused, only resets to small on reset
+    val cardHeight by animateDpAsState(
+        targetValue = if (isRunning || elapsedMillis > 0) 120.dp else 80.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "cardHeight"
+    )
+
+    // Format time as 00:00.000
+    val formattedTime = remember(elapsedMillis) {
+        val totalSeconds = elapsedMillis / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        val millis = elapsedMillis % 1000
+        String.format("%02d:%02d.%03d", minutes, seconds, millis)
+    }
+
+    // Reset dialog
+    if (showResetDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Reset Stopwatch?") },
+            text = { Text("This will reset the stopwatch to 00:00.000") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isRunning = false
+                        elapsedMillis = 0L
+                        showResetDialog = false
+                    }
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Card(
         modifier = modifier
+            .height(cardHeight)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        if (!isRunning && elapsedMillis > 0) {
+                            showResetDialog = true
+                        }
+                    }
+                )
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isRunning) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else if (elapsedMillis > 0) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.Center,
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Timer,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            // Time display
             Text(
-                text = "Start Stopwatch",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
+                text = formattedTime,
+                style = if (isRunning || elapsedMillis > 0) {
+                    MaterialTheme.typography.displayMedium
+                } else {
+                    MaterialTheme.typography.headlineMedium
+                },
+                fontWeight = FontWeight.Bold,
+                color = if (isRunning) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else if (elapsedMillis > 0) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
+
+            // Stopwatch/Pause button
+            IconButton(
+                onClick = { isRunning = !isRunning }
+            ) {
+                Icon(
+                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.Timer,
+                    contentDescription = if (isRunning) "Pause" else "Start",
+                    tint = if (isRunning) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else if (elapsedMillis > 0) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }
@@ -493,6 +723,55 @@ private fun ExpandableFab(
 }
 
 /**
+ * Sticky voice command bar at bottom
+ */
+@Composable
+private fun StickyVoiceCommandBar(
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                tonalElevation = 4.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Text(
+                text = "Tap to set alarm or timer by voice",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+/**
  * Format milliseconds to duration string
  */
 private fun formatDuration(millis: Long): String {
@@ -504,5 +783,23 @@ private fun formatDuration(millis: Long): String {
     return when {
         hours > 0 -> String.format("%02d:%02d:%02d", hours, minutes, seconds)
         else -> String.format("%02d:%02d", minutes, seconds)
+    }
+}
+
+/**
+ * Format milliseconds to time string (MM:SS or HH:MM:SS)
+ * Rounds up to the next second for display (e.g., 4:59.1 shows as 5:00)
+ */
+private fun formatMillisToTime(millis: Long): String {
+    // Round up to next second by adding 999ms before division
+    val totalSeconds = ((millis + 999) / 1000).toInt()
+    val seconds = totalSeconds % 60
+    val minutes = (totalSeconds / 60) % 60
+    val hours = totalSeconds / 3600
+
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
     }
 }

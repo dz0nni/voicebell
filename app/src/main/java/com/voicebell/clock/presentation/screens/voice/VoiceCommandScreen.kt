@@ -29,10 +29,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,12 +52,13 @@ import com.voicebell.clock.service.VoiceRecognitionService
  * - Real-time feedback
  * - Permission handling
  * - Result display
+ * - State persists across navigation (ViewModel scoped to NavGraph)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoiceCommandScreen(
+    viewModel: VoiceCommandViewModel,
     onNavigateBack: () -> Unit,
-    viewModel: VoiceCommandViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -137,7 +144,7 @@ fun VoiceCommandScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Result text (below logs)
+            // Result text with timer countdown (below logs)
             AnimatedVisibility(
                 visible = state.resultText.isNotEmpty(),
                 enter = fadeIn(),
@@ -155,17 +162,56 @@ fun VoiceCommandScreen(
                         }
                     )
                 ) {
-                    Text(
-                        text = state.resultText,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = if (state.isSuccess) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onErrorContainer
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = state.resultText,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (state.isSuccess) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            }
+                        )
+
+                        // Show timer countdown if active timer exists
+                        state.activeTimer?.let { timer ->
+                            // Real-time countdown display
+                            var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+
+                            // Update every second
+                            LaunchedEffect(timer.id) {
+                                while (true) {
+                                    currentTime = System.currentTimeMillis()
+                                    delay(100) // Update 10 times per second for smooth display
+                                }
+                            }
+
+                            // Calculate remaining time based on current time
+                            val remainingMillis = if (timer.isRunning && !timer.isPaused) {
+                                (timer.endTime - currentTime).coerceAtLeast(0)
+                            } else {
+                                timer.remainingMillis
+                            }
+
+                            Text(
+                                text = formatTimerRemaining(remainingMillis),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (state.isSuccess) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
 
@@ -180,24 +226,7 @@ fun VoiceCommandScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Instruction text (above mic button)
-            Text(
-                text = if (state.isListening) {
-                    "Listening... Speak now"
-                } else {
-                    "Tap to start"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Microphone button (fixed at bottom)
+            // Microphone button (centered, no extra text)
             PushToTalkButton(
                 isListening = state.isListening,
                 enabled = hasAudioPermission,
@@ -351,6 +380,13 @@ private fun PushToTalkButton(
     onStopListening: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
+
+    // Track if user is holding the button (long press mode)
+    var isHoldingMode by remember { mutableStateOf(false) }
+    var pressStartTime by remember { mutableStateOf(0L) }
+    var isProcessing by remember { mutableStateOf(false) } // Prevent rapid re-triggering
+
     val scale by animateFloatAsState(
         targetValue = if (isListening) 1.1f else 1f,
         animationSpec = spring(
@@ -386,31 +422,104 @@ private fun PushToTalkButton(
             ) {}
         }
 
-        // Main button
-        FloatingActionButton(
-            onClick = {
-                if (isListening) {
-                    onStopListening()
-                } else {
-                    onStartListening()
-                }
-            },
+        // Main button with dual-mode support
+        Box(
             modifier = Modifier
                 .size(150.dp)
-                .scale(scale),
-            shape = CircleShape,
-            containerColor = if (isListening) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.primary
-            }
+                .scale(scale)
+                .pointerInput(enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            if (!enabled || isProcessing) return@detectTapGestures
+
+                            // Record press start time
+                            pressStartTime = System.currentTimeMillis()
+
+                            // If not currently listening, start immediately (hold mode)
+                            if (!isListening) {
+                                isProcessing = true
+                                isHoldingMode = true
+                                scope.launch {
+                                    onStartListening()
+                                    delay(500) // Debounce: prevent rapid re-triggering
+                                    isProcessing = false
+                                }
+                            }
+
+                            // Wait for release
+                            val released = tryAwaitRelease()
+
+                            // Calculate how long the button was pressed
+                            val pressDuration = System.currentTimeMillis() - pressStartTime
+
+                            if (released) {
+                                if (isHoldingMode && pressDuration < 300) {
+                                    // Very short press - treat as toggle mode, don't stop
+                                    isHoldingMode = false
+                                    // Already started listening, keep it going
+                                } else if (isHoldingMode) {
+                                    // Long press released - stop listening (hold mode)
+                                    isHoldingMode = false
+                                    isProcessing = true
+                                    scope.launch {
+                                        onStopListening()
+                                        delay(300)
+                                        isProcessing = false
+                                    }
+                                } else if (!isHoldingMode && isListening) {
+                                    // Toggle mode - stop listening
+                                    isProcessing = true
+                                    scope.launch {
+                                        onStopListening()
+                                        delay(300)
+                                        isProcessing = false
+                                    }
+                                }
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = if (isListening) "Stop listening" else "Start listening",
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = CircleShape,
+                color = if (isListening) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = if (isListening) "Stop listening" else "Start listening",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.White
+                    )
+                }
+            }
         }
+    }
+}
+
+/**
+ * Format timer remaining time to display format.
+ * Rounds up to the next second for display (e.g., 4:59.1 shows as 5:00)
+ * Examples: "1:23" (1 min 23 sec), "45" (45 seconds), "12:34" (12 min 34 sec)
+ */
+private fun formatTimerRemaining(remainingMillis: Long): String {
+    // Round up to next second by adding 999ms before division
+    val totalSeconds = ((remainingMillis + 999) / 1000).toInt().coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+
+    return if (minutes > 0) {
+        "$minutes:${seconds.toString().padStart(2, '0')}"
+    } else {
+        seconds.toString()
     }
 }

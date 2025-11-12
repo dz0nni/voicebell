@@ -46,15 +46,23 @@ fun MainScreen(
                 recentAlarms = state.recentAlarms,
                 recentTimers = state.recentTimers,
                 onToggleAlarm = { alarmId, isEnabled ->
-                    // TODO: Handle alarm toggle
+                    viewModel.toggleAlarm(alarmId, isEnabled)
                 },
                 onEditAlarm = onNavigateToEditAlarm,
+                onDeleteAlarm = { alarmId ->
+                    viewModel.deleteAlarm(alarmId)
+                },
                 onRestartTimer = { timerId ->
-                    // TODO: Handle timer restart
+                    viewModel.restartTimer(timerId)
+                },
+                onStopTimer = { timerId ->
+                    viewModel.stopTimer(timerId)
+                },
+                onDeleteTimer = { timerId ->
+                    viewModel.deleteTimer(timerId)
                 },
                 onEditTimer = onNavigateToEditTimer,
                 onVoiceCommand = onVoiceCommand,
-                onStartStopwatch = onNavigateToStopwatch,
                 onCreateAlarm = onNavigateToCreateAlarm,
                 onCreateTimer = onNavigateToCreateTimer,
                 onNavigateToSettings = onNavigateToSettings,
