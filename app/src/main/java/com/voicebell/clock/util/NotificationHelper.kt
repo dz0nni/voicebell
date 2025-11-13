@@ -73,11 +73,15 @@ class NotificationHelper @Inject constructor(
             // Alarm service channel (for foreground service)
             val alarmServiceChannel = NotificationChannel(
                 CHANNEL_ID_ALARM_SERVICE,
-                "Alarm Service",
-                NotificationManager.IMPORTANCE_LOW
+                "Alarm Ringing",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notification shown when alarm is ringing"
-                setShowBadge(false)
+                setShowBadge(true)
+                enableVibration(true)
+                enableLights(true)
+                setBypassDnd(true) // Allow alarms to bypass Do Not Disturb
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
 
             // Timer service channel (for timer countdown)
