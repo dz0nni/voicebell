@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -484,11 +485,19 @@ private fun UiModeDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 UiMode.values().forEach { mode ->
+                    val isDisabled = mode == UiMode.CLASSIC
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelectMode(mode) }
-                            .padding(vertical = 12.dp),
+                            .then(
+                                if (!isDisabled) {
+                                    Modifier.clickable { onSelectMode(mode) }
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(vertical = 12.dp)
+                            .alpha(if (isDisabled) 0.4f else 1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -501,7 +510,7 @@ private fun UiModeDialog(
                             Text(
                                 text = when (mode) {
                                     UiMode.EXPERIMENTAL -> "All features on one screen with voice button"
-                                    UiMode.CLASSIC -> "Traditional layout with tabs"
+                                    UiMode.CLASSIC -> "Traditional layout with tabs (temporarily disabled)"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant

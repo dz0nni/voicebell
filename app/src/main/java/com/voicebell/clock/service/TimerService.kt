@@ -52,6 +52,9 @@ class TimerService : Service() {
     @Inject
     lateinit var notificationHelper: NotificationHelper
 
+    @Inject
+    lateinit var activeServiceManager: com.voicebell.clock.util.ActiveServiceManager
+
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
     private var currentTimerId: Long = -1
@@ -182,6 +185,9 @@ class TimerService : Service() {
     private fun handleTimerFinished(vibrate: Boolean) {
         Log.d(TAG, "Timer finished!")
 
+        // Mark timer as active (ringing)
+        activeServiceManager.setTimerActive(currentTimerId)
+
         serviceScope.launch {
             try {
                 // Mark timer as finished in database
@@ -196,14 +202,12 @@ class TimerService : Service() {
                 }
 
                 // Show finished notification
+                // The notification's full-screen intent will handle launching the activity
                 val notification = createFinishedNotification()
                 notificationHelper.notificationManager.notify(
                     NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED,
                     notification
                 )
-
-                // Launch full-screen activity
-                launchFinishedActivity()
 
                 // Stop countdown but keep service running for alarm
                 updateJob?.cancel()
@@ -221,6 +225,10 @@ class TimerService : Service() {
 
     private fun finishTimer() {
         Log.d(TAG, "Finishing timer (user dismissed)")
+
+        // Clear active timer
+        activeServiceManager.clearActiveTimer()
+
         stopAlarm()
         stopSelf()
     }
@@ -392,10 +400,12 @@ class TimerService : Service() {
             .setContentText("Tap to stop alarm")
             .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Add proper icon
             .setContentIntent(finishPendingIntent)
+            .setFullScreenIntent(finishPendingIntent, true) // Enable full-screen intent for locked screen
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(finishPendingIntent, true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibrate, lights for heads-up
             .build()
     }
 

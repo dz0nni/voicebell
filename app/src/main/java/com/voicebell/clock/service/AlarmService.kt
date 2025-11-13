@@ -17,6 +17,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.voicebell.clock.R
 import com.voicebell.clock.domain.repository.AlarmRepository
 import com.voicebell.clock.presentation.screens.alarm.AlarmRingingActivity
@@ -111,15 +112,24 @@ class AlarmService : Service() {
     private fun startAlarm(alarmId: Long, isPreAlarm: Boolean) {
         Log.d(TAG, "Starting alarm: id=$alarmId, isPreAlarm=$isPreAlarm")
 
+        // Check if we can show full-screen intents (Android 12+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val notificationManager = NotificationManagerCompat.from(this)
+            val canUseFullScreenIntent = notificationManager.canUseFullScreenIntent()
+            Log.d(TAG, "Can use full-screen intent: $canUseFullScreenIntent")
+            if (!canUseFullScreenIntent) {
+                Log.w(TAG, "Full-screen intent permission not granted! Alarm notification may not appear on lock screen.")
+                Log.w(TAG, "User needs to grant 'Display over other apps' permission in system settings.")
+            }
+        }
+
         // Mark alarm as active
         activeServiceManager.setAlarmActive(alarmId)
 
-        // Start foreground service
+        // Start foreground service with high-priority notification
+        // The notification's full-screen intent will handle launching the activity
         val notification = createForegroundNotification(alarmId, isPreAlarm)
         startForeground(NotificationHelper.NOTIFICATION_ID_ALARM_SERVICE, notification)
-
-        // Launch full-screen alarm activity
-        launchAlarmActivity(alarmId, isPreAlarm)
 
         // Load alarm from database and start ringing
         serviceScope.launch {
@@ -319,6 +329,8 @@ class AlarmService : Service() {
             .setAutoCancel(false)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibrate, lights for heads-up
             // Add large action buttons
             .addAction(
                 R.drawable.ic_launcher_foreground, // TODO: Add snooze icon
@@ -339,15 +351,33 @@ class AlarmService : Service() {
         // Clear active alarm
         activeServiceManager.clearActiveAlarm()
 
-        // Reset snooze count
+        // Stop ringing immediately for better UX
+        stopRinging()
+
+        // Handle alarm dismissal in background
         serviceScope.launch {
-            if (currentAlarmId != -1L) {
-                alarmRepository.resetSnoozeCount(currentAlarmId)
+            try {
+                if (currentAlarmId != -1L) {
+                    val alarm = alarmRepository.getAlarmById(currentAlarmId)
+                    if (alarm != null) {
+                        // Only disable one-time alarms (non-repeating)
+                        if (alarm.repeatDays.isEmpty()) {
+                            alarmRepository.toggleAlarmEnabled(currentAlarmId, false)
+                            Log.d(TAG, "One-time alarm $currentAlarmId disabled")
+                        } else {
+                            Log.d(TAG, "Recurring alarm $currentAlarmId dismissed but stays enabled")
+                        }
+
+                        alarmRepository.resetSnoozeCount(currentAlarmId)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error dismissing alarm", e)
+            } finally {
+                // Stop service after database updates complete
+                stopSelf()
             }
         }
-
-        stopRinging()
-        stopSelf()
     }
 
     private fun snoozeAlarm() {

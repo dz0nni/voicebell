@@ -58,25 +58,24 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
-     * Check if USE_FULL_SCREEN_INTENT permission is granted (Android 14+)
+     * Check if USE_FULL_SCREEN_INTENT permission is granted (Android 12+)
+     *
+     * Android 12+ (API 31+) requires runtime permission for full-screen intents.
+     * This uses the official NotificationManagerCompat API which is more reliable
+     * than AppOpsManager checks.
      */
     fun canUseFullScreenIntent(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Android 14+: Check using AppOpsManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+: Use official API
             try {
-                val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-                val mode = appOpsManager.unsafeCheckOpNoThrow(
-                    "android:use_full_screen_intent",
-                    android.os.Process.myUid(),
-                    context.packageName
-                )
-                mode == AppOpsManager.MODE_ALLOWED
-            } catch (e: Exception) {
-                // Fallback to NotificationManagerCompat check
                 NotificationManagerCompat.from(context).canUseFullScreenIntent()
+            } catch (e: Exception) {
+                // Fallback: assume granted on error
+                false
             }
         } else {
-            true // Not needed on older versions
+            // Android 11 and below: Full-screen intents work by default
+            true
         }
     }
 

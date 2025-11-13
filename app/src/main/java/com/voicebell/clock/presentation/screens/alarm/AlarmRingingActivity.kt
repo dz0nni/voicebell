@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.voicebell.clock.presentation.theme.VoiceBellTheme
 import com.voicebell.clock.service.AlarmService
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,7 +33,7 @@ import java.time.format.DateTimeFormatter
 @AndroidEntryPoint
 class AlarmRingingActivity : ComponentActivity() {
 
-    private var alarmId: Long = -1
+    private val viewModel: AlarmRingingViewModel by viewModels()
     private var isPreAlarm: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,13 +53,14 @@ class AlarmRingingActivity : ComponentActivity() {
         }
 
         // Get alarm data from intent
-        alarmId = intent.getLongExtra(AlarmService.EXTRA_ALARM_ID, -1)
         isPreAlarm = intent.getBooleanExtra(AlarmService.EXTRA_IS_PRE_ALARM, false)
 
         setContent {
             VoiceBellTheme {
+                val alarmLabel by viewModel.alarmLabel.collectAsStateWithLifecycle()
+
                 AlarmRingingScreen(
-                    alarmId = alarmId,
+                    alarmLabel = alarmLabel,
                     isPreAlarm = isPreAlarm,
                     onDismiss = { dismissAlarm() },
                     onSnooze = { snoozeAlarm() }
@@ -95,7 +97,7 @@ class AlarmRingingActivity : ComponentActivity() {
 
 @Composable
 fun AlarmRingingScreen(
-    alarmId: Long,
+    alarmLabel: String,
     isPreAlarm: Boolean,
     onDismiss: () -> Unit,
     onSnooze: () -> Unit
@@ -137,12 +139,14 @@ fun AlarmRingingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // TODO: Load and display alarm label from database
-            Text(
-                text = "Alarm ID: $alarmId",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Display alarm label if available
+            if (alarmLabel.isNotBlank()) {
+                Text(
+                    text = alarmLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 

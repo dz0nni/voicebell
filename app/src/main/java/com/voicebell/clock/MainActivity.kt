@@ -53,11 +53,15 @@ class MainActivity : ComponentActivity() {
                         // Active alarm/timer banner overlay
                         ActiveServiceBanner(
                             activeAlarmIdFlow = activeServiceManager.activeAlarmId,
+                            activeTimerIdFlow = activeServiceManager.activeTimerId,
                             onDismissAlarm = {
                                 dismissAlarm()
                             },
                             onSnoozeAlarm = {
                                 snoozeAlarm()
+                            },
+                            onStopTimer = {
+                                stopTimer()
                             }
                         )
                     }
@@ -79,69 +83,127 @@ class MainActivity : ComponentActivity() {
         }
         startService(intent)
     }
+
+    private fun stopTimer() {
+        val intent = Intent(this, com.voicebell.clock.service.TimerService::class.java).apply {
+            action = com.voicebell.clock.service.TimerService.ACTION_FINISH
+        }
+        startService(intent)
+    }
 }
 
 @Composable
 fun ActiveServiceBanner(
     activeAlarmIdFlow: Flow<Long?>,
+    activeTimerIdFlow: Flow<Long?>,
     onDismissAlarm: () -> Unit,
     onSnoozeAlarm: () -> Unit,
+    onStopTimer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeAlarmId by activeAlarmIdFlow.collectAsState(initial = null)
+    val activeTimerId by activeTimerIdFlow.collectAsState(initial = null)
 
-    // Show banner only if there's an active alarm
-    if (activeAlarmId != null) {
+    // Show banner if there's an active alarm or timer
+    if (activeAlarmId != null || activeTimerId != null) {
         Box(
             modifier = modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            contentAlignment = Alignment.TopCenter
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f)),
+            contentAlignment = Alignment.Center
         ) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(32.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(32.dp)
                 ) {
-                    Text(
-                        text = "⏰ ALARM IS RINGING!",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
+                    // Show alarm or timer specific UI
+                    if (activeAlarmId != null) {
+                        // Alarm UI
+                        Text(
+                            text = "⏰",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Snooze button
-                        Button(
-                            onClick = onSnoozeAlarm,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary
-                            )
+                        Text(
+                            text = "ALARM IS RINGING!",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text("Snooze")
-                        }
+                            // Dismiss button (primary action)
+                            Button(
+                                onClick = onDismissAlarm,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Text(
+                                    text = "Dismiss",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
+                            }
 
-                        // Dismiss button
+                            // Snooze button (secondary action)
+                            OutlinedButton(
+                                onClick = onSnoozeAlarm,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp)
+                            ) {
+                                Text(
+                                    text = "Snooze",
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
+                            }
+                        }
+                    } else {
+                        // Timer UI
+                        Text(
+                            text = "⏱️",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+
+                        Text(
+                            text = "TIMER FINISHED!",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+
+                        // Stop button
                         Button(
-                            onClick = onDismissAlarm,
-                            modifier = Modifier.weight(1f),
+                            onClick = onStopTimer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(72.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("Dismiss")
+                            Text(
+                                text = "Stop",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
                         }
                     }
                 }
