@@ -48,8 +48,14 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
     suspend operator fun invoke(recognizedText: String): CommandExecutionResult {
         Log.d(TAG, "Executing voice command: $recognizedText")
 
+        // Normalize recognized text (fix common recognition errors)
+        val normalizedText = normalizeRecognizedText(recognizedText)
+        if (normalizedText != recognizedText) {
+            Log.d(TAG, "Normalized to: $normalizedText")
+        }
+
         // Parse the command
-        val parseResult = voiceCommandParser.parseCommand(recognizedText)
+        val parseResult = voiceCommandParser.parseCommand(normalizedText)
 
         // Execute based on command type
         return when (parseResult) {
@@ -257,6 +263,17 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
             }
             else -> "$seconds second${if (seconds != 1) "s" else ""}"
         }
+    }
+
+    /**
+     * Normalize recognized text to fix common speech recognition errors.
+     *
+     * Common fixes:
+     * - "then" → "ten" (e.g., "eight then" → "eight ten" → 08:10)
+     */
+    private fun normalizeRecognizedText(text: String): String {
+        // Replace "then" with "ten" (case-insensitive, word boundaries)
+        return text.replace(Regex("\\bthen\\b", RegexOption.IGNORE_CASE), "ten")
     }
 }
 
