@@ -2,6 +2,7 @@ package com.voicebell.clock.domain.usecase.alarm
 
 import com.voicebell.clock.domain.model.Alarm
 import com.voicebell.clock.domain.repository.AlarmRepository
+import com.voicebell.clock.util.AlarmScheduler
 import javax.inject.Inject
 
 /**
@@ -10,7 +11,8 @@ import javax.inject.Inject
  * @return The ID of the created alarm.
  */
 class CreateAlarmUseCase @Inject constructor(
-    private val alarmRepository: AlarmRepository
+    private val alarmRepository: AlarmRepository,
+    private val alarmScheduler: AlarmScheduler
 ) {
     suspend operator fun invoke(alarm: Alarm): Result<Long> {
         return try {
@@ -27,6 +29,10 @@ class CreateAlarmUseCase @Inject constructor(
 
             // Update next trigger time
             alarmRepository.updateNextTriggerTime(alarmId, nextTrigger)
+
+            // Schedule alarm with AlarmManager
+            val createdAlarm = alarm.copy(id = alarmId)
+            alarmScheduler.scheduleAlarm(createdAlarm)
 
             Result.success(alarmId)
         } catch (e: Exception) {
