@@ -128,7 +128,7 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
      */
     private suspend fun executeTimerCommand(command: VoiceCommandResult.TimerCommand): CommandExecutionResult {
         return try {
-            val label = command.label ?: "Voice Timer"
+            val label = command.label ?: "" // No default label
 
             Log.d(TAG, "Starting timer for ${command.durationMillis}ms")
             val result = startTimerUseCase(
