@@ -182,6 +182,84 @@ class VoiceCommandParser @Inject constructor() {
             "five" to 5, "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9
         )
 
+        // Pattern 3a: Handle "[minute word(s)] past [hour word]" (e.g., "five past eight", "twenty past seven")
+        val pastPattern = """\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty)\s+past\s+\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b""".toRegex()
+        pastPattern.find(text)?.let { match ->
+            val minuteWord = match.groupValues[1]
+            val hourWord = match.groupValues[2]
+
+            val minute = minuteWords[minuteWord] ?: singleDigitWords[minuteWord] ?: return@let
+            val hour = hourWords[hourWord] ?: return@let
+
+            // Check for AM/PM context
+            val adjustedHour = when {
+                text.contains("pm") || text.contains("evening") || text.contains("night") || text.contains("afternoon") || text.contains("tonight") -> {
+                    if (hour == 12) 12 else hour + 12
+                }
+                text.contains("am") || text.contains("morning") -> {
+                    if (hour == 12) 0 else hour
+                }
+                else -> hour
+            }
+
+            if (minute in 0..59 && adjustedHour in 0..23) {
+                return LocalTime.of(adjustedHour, minute)
+            }
+        }
+
+        // Pattern 3b: Handle "[hour word] o [single digit]" (e.g., "eight o four", "seven o nine")
+        val oClockPattern = """\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+o\s+(one|two|three|four|five|six|seven|eight|nine)\b""".toRegex()
+        oClockPattern.find(text)?.let { match ->
+            val hourWord = match.groupValues[1]
+            val minuteWord = match.groupValues[2]
+
+            val hour = hourWords[hourWord] ?: return@let
+            val minute = singleDigitWords[minuteWord] ?: return@let
+
+            // "o" followed by single digit means "oh-X" (e.g., "eight o four" = 8:04)
+            // Check for AM/PM context
+            val adjustedHour = when {
+                text.contains("pm") || text.contains("evening") || text.contains("night") || text.contains("afternoon") || text.contains("tonight") -> {
+                    if (hour == 12) 12 else hour + 12
+                }
+                text.contains("am") || text.contains("morning") -> {
+                    if (hour == 12) 0 else hour
+                }
+                else -> hour
+            }
+
+            if (minute in 0..9 && adjustedHour in 0..23) {
+                return LocalTime.of(adjustedHour, minute)
+            }
+        }
+
+        // Pattern 3c: Handle "[hour word] [single digit]" without "o" (e.g., "eight five", "seven four")
+        // This pattern is more ambiguous, so we check it AFTER more specific patterns
+        val hourSingleDigitPattern = """\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(one|two|three|four|five|six|seven|eight|nine)(?:\s|$)""".toRegex()
+        hourSingleDigitPattern.find(text)?.let { match ->
+            val hourWord = match.groupValues[1]
+            val minuteWord = match.groupValues[2]
+
+            val hour = hourWords[hourWord] ?: return@let
+            val minute = singleDigitWords[minuteWord] ?: return@let
+
+            // Single digit after hour word means minutes (e.g., "eight five" = 8:05)
+            // Check for AM/PM context
+            val adjustedHour = when {
+                text.contains("pm") || text.contains("evening") || text.contains("night") || text.contains("afternoon") || text.contains("tonight") -> {
+                    if (hour == 12) 12 else hour + 12
+                }
+                text.contains("am") || text.contains("morning") -> {
+                    if (hour == 12) 0 else hour
+                }
+                else -> hour
+            }
+
+            if (minute in 0..9 && adjustedHour in 0..23) {
+                return LocalTime.of(adjustedHour, minute)
+            }
+        }
+
         // Try to find "[at/for] [hour]" pattern first (supports both "at" and "for")
         // Use word boundaries \b to match whole words only (e.g., "seven" but not "seventeen")
         val atOrForHourPattern = """(?:at|for)\s+\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b""".toRegex()
