@@ -35,17 +35,16 @@ android {
     signingConfigs {
         create("release") {
             // Signing configuration from environment variables (for CI/CD)
-            val keystorePath = System.getenv("KEYSTORE_PATH")
-            val keystorePassword = System.getenv("KEYSTORE_PASSWORD")
-            val keyAlias = System.getenv("KEY_ALIAS")
-            val keyPassword = System.getenv("KEY_PASSWORD")
+            // Falls back to local keystore if environment variables are not set
+            val keystorePath = System.getenv("KEYSTORE_PATH") ?: "voicebell-release.keystore"
+            val keystorePassword = System.getenv("KEYSTORE_PASSWORD") ?: "SYCDD3sKn3pLbA7IxQloWuK5FcehQqwBq"
+            val keyAlias = System.getenv("KEY_ALIAS") ?: "voicebell"
+            val keyPassword = System.getenv("KEY_PASSWORD") ?: "lbBDESs1q5ViiGw25S8Zw3aUxP6P8z77U"
 
-            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
-                storeFile = file(keystorePath)
-                storePassword = keystorePassword
-                this.keyAlias = keyAlias
-                this.keyPassword = keyPassword
-            }
+            storeFile = file(keystorePath)
+            storePassword = keystorePassword
+            this.keyAlias = keyAlias
+            this.keyPassword = keyPassword
         }
     }
 
