@@ -291,7 +291,7 @@ private fun ProcessLogArea(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Process log",
+                        text = "Process log for geeks",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -427,10 +427,10 @@ private fun PushToTalkButton(
             modifier = Modifier
                 .size(150.dp)
                 .scale(scale)
-                .pointerInput(enabled) {
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
-                            if (!enabled || isProcessing) return@detectTapGestures
+                            if (isProcessing) return@detectTapGestures
 
                             // Record press start time
                             pressStartTime = System.currentTimeMillis()

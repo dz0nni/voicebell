@@ -84,10 +84,12 @@ class NotificationHelper @Inject constructor(
             val timerServiceChannel = NotificationChannel(
                 CHANNEL_ID_TIMER_SERVICE,
                 "Timer Service",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_MIN
             ).apply {
                 description = "Notification shown during timer countdown"
                 setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
             }
 
             // Timer finished channel (for timer completion alert)
@@ -108,10 +110,12 @@ class NotificationHelper @Inject constructor(
             val voiceServiceChannel = NotificationChannel(
                 CHANNEL_ID_VOICE_SERVICE,
                 "Voice Recognition",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_MIN
             ).apply {
                 description = "Notification shown during voice recognition"
                 setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
             }
 
             notificationManager.createNotificationChannels(

@@ -2,23 +2,23 @@ package com.voicebell.clock.domain.model
 
 /**
  * UI mode for the application layout.
- * Users can switch between classic and experimental layouts.
+ * Users can switch between classic and main screen layouts.
  */
 enum class UiMode(val displayName: String) {
     /**
-     * Classic layout with tabs for Alarm, Clock, Timer, Stopwatch
-     */
-    CLASSIC("Classic"),
-
-    /**
-     * Experimental layout with all features on single screen:
+     * Main screen layout with all features on single screen:
      * - Recent alarms at top
      * - Recent timers below
-     * - Large voice command button in center
-     * - Stopwatch quick launch at bottom
+     * - Large voice command button at bottom
+     * - Stopwatch card at top (toggleable)
      * - Expandable FAB for quick add alarm/timer
      */
-    EXPERIMENTAL("Experimental");
+    EXPERIMENTAL("Main Screen"),
+
+    /**
+     * Classic layout with tabs for Alarm, Clock, Timer, Stopwatch
+     */
+    CLASSIC("Classic");
 
     companion object {
         fun fromString(value: String): UiMode {

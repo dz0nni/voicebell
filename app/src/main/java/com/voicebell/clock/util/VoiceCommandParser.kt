@@ -81,13 +81,28 @@ class VoiceCommandParser @Inject constructor() {
         val time = extractTime(text)
 
         return if (time != null) {
+            // Check if time was explicitly specified with context words
+            val isExplicitTime = hasExplicitTimeContext(text)
+
             VoiceCommandResult.AlarmCommand(
                 time = time,
-                label = extractLabel(text)
+                label = extractLabel(text),
+                isExplicitTime = isExplicitTime
             )
         } else {
             VoiceCommandResult.Error("Could not understand the time. Please try again.")
         }
+    }
+
+    /**
+     * Check if text contains explicit time context words (AM/PM or time-of-day words).
+     */
+    private fun hasExplicitTimeContext(text: String): Boolean {
+        val timeContextWords = listOf(
+            "am", "pm",
+            "morning", "evening", "afternoon", "night", "tonight"
+        )
+        return timeContextWords.any { text.contains(it) }
     }
 
     /**
@@ -206,7 +221,7 @@ class VoiceCommandParser @Inject constructor() {
 
             // Check for AM/PM after minutes
             val adjustedHour = when {
-                remainingText.contains("pm") || remainingText.contains("evening") || remainingText.contains("night") -> {
+                remainingText.contains("pm") || remainingText.contains("evening") || remainingText.contains("night") || remainingText.contains("afternoon") || remainingText.contains("tonight") -> {
                     if (hour == 12) 12 else hour + 12
                 }
                 remainingText.contains("am") || remainingText.contains("morning") -> {
@@ -232,7 +247,7 @@ class VoiceCommandParser @Inject constructor() {
 
                 // Determine AM/PM from context
                 val hour = when {
-                    text.contains("pm") || text.contains("evening") || text.contains("night") -> {
+                    text.contains("pm") || text.contains("evening") || text.contains("night") || text.contains("afternoon") || text.contains("tonight") -> {
                         if (number == 12) 12 else number + 12
                     }
                     text.contains("am") || text.contains("morning") -> {
@@ -389,7 +404,8 @@ class VoiceCommandParser @Inject constructor() {
 sealed class VoiceCommandResult {
     data class AlarmCommand(
         val time: LocalTime,
-        val label: String?
+        val label: String?,
+        val isExplicitTime: Boolean = false
     ) : VoiceCommandResult()
 
     data class TimerCommand(

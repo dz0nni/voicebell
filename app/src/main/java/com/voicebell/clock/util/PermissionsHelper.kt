@@ -2,6 +2,10 @@ package com.voicebell.clock.util
 
 import android.Manifest
 import android.app.Activity
+import android.app.AppOpsManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,8 +13,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.voicebell.clock.MainActivity
+import com.voicebell.clock.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,8 +62,19 @@ class PermissionsHelper @Inject constructor(
      */
     fun canUseFullScreenIntent(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Use NotificationManagerCompat to check full screen intent capability
-            NotificationManagerCompat.from(context).canUseFullScreenIntent()
+            // Android 14+: Check using AppOpsManager
+            try {
+                val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+                val mode = appOpsManager.unsafeCheckOpNoThrow(
+                    "android:use_full_screen_intent",
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+                mode == AppOpsManager.MODE_ALLOWED
+            } catch (e: Exception) {
+                // Fallback to NotificationManagerCompat check
+                NotificationManagerCompat.from(context).canUseFullScreenIntent()
+            }
         } else {
             true // Not needed on older versions
         }
@@ -72,6 +90,16 @@ class PermissionsHelper @Inject constructor(
         } else {
             true // Not applicable on older versions
         }
+    }
+
+    /**
+     * Check if RECORD_AUDIO permission is granted (required for voice commands)
+     */
+    fun isRecordAudioGranted(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -95,63 +123,132 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
-     * Open full-screen intent settings (Android 14+)
-     * Opens the specific settings page for "Alarms & Reminders" notification category
+     * Create a test notification with full-screen intent to enable the permission toggle
+     * This allows Android to recognize that the app uses full-screen intents
      */
-    fun openFullScreenIntentSettings() {
-        try {
-            val intent = Intent().apply {
-                when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                        // Android 14+: Open notification settings and let user navigate to full-screen intent
-                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    }
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
-                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    }
-                    else -> {
-                        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                        data = Uri.parse("package:${context.packageName}")
-                    }
+    private fun createTestFullScreenNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            try {
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+                // Create a temporary notification channel if needed
+                val channelId = "full_screen_test_channel"
+                val channel = NotificationChannel(
+                    channelId,
+                    "Permission Setup",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Temporary channel for setting up full-screen notifications"
                 }
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                notificationManager.createNotificationChannel(channel)
+
+                // Create pending intent
+                val intent = Intent(context, MainActivity::class.java)
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    999,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                // Create notification with full-screen intent
+                val notification = NotificationCompat.Builder(context, channelId)
+                    .setContentTitle("Setting up permissions...")
+                    .setContentText("This notification will be dismissed automatically")
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setAutoCancel(true)
+                    .setTimeoutAfter(100) // Auto-dismiss after 100ms
+                    .setFullScreenIntent(pendingIntent, true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .build()
+
+                // Post and immediately cancel to register the capability
+                notificationManager.notify(999, notification)
+                // Cancel after a short delay to ensure Android registers it
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    notificationManager.cancel(999)
+                }, 200)
+            } catch (e: Exception) {
+                // Ignore errors - this is best effort
             }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            // Fallback to general app settings
-            openNotificationSettings()
         }
     }
 
     /**
-     * Open battery optimization settings
-     * Opens the correct settings page for user to disable battery optimization
+     * Open full-screen intent settings (Android 14+)
+     * Opens the direct settings page for managing full-screen intent permission
+     * First creates a test notification to enable the permission toggle
      */
-    fun openBatteryOptimizationSettings() {
+    fun openFullScreenIntentSettings() {
+        // First, create a test notification so Android knows we use full-screen intents
+        createTestFullScreenNotification()
+
+        // Small delay to ensure notification is registered before opening settings
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                val intent = Intent().apply {
+                    when {
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                            // Android 14+: Open the dedicated full-screen intent settings page
+                            action = Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                            // Android 8-13: Open notification settings (best we can do)
+                            action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        else -> {
+                            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                    }
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback to general notification settings
+                openNotificationSettings()
+            }
+        }, 300) // 300ms delay
+    }
+
+    /**
+     * Request to ignore battery optimization - shows direct dialog
+     * This is much simpler than opening settings
+     */
+    fun requestIgnoreBatteryOptimization() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
-                // Primary: Try to open app-specific battery settings page
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                     data = Uri.parse("package:${context.packageName}")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
             } catch (e: Exception) {
-                // Fallback: Open general battery optimization list
-                try {
-                    val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(fallbackIntent)
-                } catch (e2: Exception) {
-                    // Last resort: Open general settings
-                    val settingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(settingsIntent)
+                // Fallback: Open battery optimization settings list
+                openBatteryOptimizationSettings()
+            }
+        }
+    }
+
+    /**
+     * Open battery optimization settings (fallback)
+     * Opens the correct settings page for user to disable battery optimization
+     */
+    fun openBatteryOptimizationSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // Last resort: Open general settings
+                val settingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(settingsIntent)
             }
         }
     }
@@ -170,20 +267,33 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
+     * Open app settings page where user can grant microphone permission
+     */
+    fun openMicrophoneSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    /**
      * Get a summary of all permission statuses
      */
     data class PermissionStatus(
         val notificationsEnabled: Boolean,
         val canScheduleExactAlarms: Boolean,
         val canUseFullScreenIntent: Boolean,
-        val batteryOptimizationDisabled: Boolean
+        val batteryOptimizationDisabled: Boolean,
+        val recordAudioGranted: Boolean
     ) {
         val allGranted: Boolean
             get() = notificationsEnabled && canScheduleExactAlarms &&
-                   canUseFullScreenIntent && batteryOptimizationDisabled
+                   canUseFullScreenIntent && batteryOptimizationDisabled &&
+                   recordAudioGranted
 
         val criticalGranted: Boolean
-            get() = notificationsEnabled && canScheduleExactAlarms
+            get() = recordAudioGranted && notificationsEnabled && canScheduleExactAlarms
     }
 
     /**
@@ -194,7 +304,8 @@ class PermissionsHelper @Inject constructor(
             notificationsEnabled = areNotificationsEnabled(),
             canScheduleExactAlarms = canScheduleExactAlarms(),
             canUseFullScreenIntent = canUseFullScreenIntent(),
-            batteryOptimizationDisabled = isBatteryOptimizationDisabled()
+            batteryOptimizationDisabled = isBatteryOptimizationDisabled(),
+            recordAudioGranted = isRecordAudioGranted()
         )
     }
 }

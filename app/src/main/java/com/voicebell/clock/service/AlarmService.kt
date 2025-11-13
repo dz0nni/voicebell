@@ -286,6 +286,7 @@ class AlarmService : Service() {
             .setContentText(content)
             .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Add proper icon
             .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true) // Enable full-screen intent for locked screen
             .setOngoing(true)
             .setAutoCancel(false)
             .setPriority(NotificationCompat.PRIORITY_MAX)

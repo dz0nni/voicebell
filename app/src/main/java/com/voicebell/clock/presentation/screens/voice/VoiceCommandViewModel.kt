@@ -54,6 +54,11 @@ class VoiceCommandViewModel @Inject constructor(
     )
     val state: StateFlow<VoiceCommandState> = _state.asStateFlow()
 
+    // Track last processed command to avoid duplicates from multiple receivers
+    private var lastProcessedText: String? = null
+    private var lastProcessedTime: Long = 0
+    private val DUPLICATE_WINDOW_MS = 1000L // 1 second window
+
     init {
         // Observe active timer for countdown display
         getActiveTimerUseCase()
@@ -126,6 +131,18 @@ class VoiceCommandViewModel @Inject constructor(
 
     private fun executeCommand(recognizedText: String) {
         viewModelScope.launch {
+            // Check for duplicate command within 1 second window
+            val currentTime = System.currentTimeMillis()
+            if (recognizedText == lastProcessedText &&
+                (currentTime - lastProcessedTime) < DUPLICATE_WINDOW_MS) {
+                android.util.Log.d("VoiceCommandViewModel", "Skipping duplicate command: $recognizedText")
+                return@launch
+            }
+
+            // Update duplicate detection
+            lastProcessedText = recognizedText
+            lastProcessedTime = currentTime
+
             updateState { it.copy(isListening = false) }
 
             addLog("🔍 Parsing command...", LogType.PROCESSING)

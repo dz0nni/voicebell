@@ -1,5 +1,7 @@
 package com.voicebell.clock.presentation.screens.settings
 
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.voicebell.clock.domain.model.UiMode
 import com.voicebell.clock.util.PermissionsHelper
@@ -42,7 +47,35 @@ fun SettingsScreen(
     }
 
     // Check permissions on each recomposition to show current status
-    val permissionStatus = remember { permissionsHelper.getPermissionStatus() }
+    var permissionStatus by remember { mutableStateOf(permissionsHelper.getPermissionStatus()) }
+
+    // Refresh permission status when user returns to the app (e.g., from system settings)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // User returned to the app - refresh permission status
+                permissionStatus = permissionsHelper.getPermissionStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Permission launchers for runtime permissions
+    val microphonePermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        permissionStatus = permissionsHelper.getPermissionStatus()
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        permissionStatus = permissionsHelper.getPermissionStatus()
+    }
 
     Scaffold(
         topBar = {
@@ -165,7 +198,7 @@ fun SettingsScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                text = "Some critical permissions are missing. Alarms and timers may not work reliably.",
+                                text = "Critical permissions missing. Voice commands and alarms require all permissions below.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -174,43 +207,74 @@ fun SettingsScreen(
                 }
             }
 
-            // Notifications permission
+            // 1. Microphone permission (CRITICAL - core feature)
+            item {
+                PermissionItem(
+                    title = "Microphone Access",
+                    subtitle = "Critical: Required for voice commands (main feature)",
+                    isGranted = permissionStatus.recordAudioGranted,
+                    onClick = {
+                        if (!permissionStatus.recordAudioGranted) {
+                            microphonePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    buttonText = if (permissionStatus.recordAudioGranted) null else "Grant"
+                )
+            }
+
+            // 2. Notifications permission (CRITICAL)
             item {
                 PermissionItem(
                     title = "Notifications",
-                    subtitle = "Required for alarm and timer alerts",
+                    subtitle = "Critical: Required for all alarm and timer alerts",
                     isGranted = permissionStatus.notificationsEnabled,
-                    onClick = { permissionsHelper.openNotificationSettings() }
+                    onClick = {
+                        if (!permissionStatus.notificationsEnabled) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                permissionsHelper.openNotificationSettings()
+                            }
+                        }
+                    },
+                    buttonText = if (permissionStatus.notificationsEnabled) null else "Grant"
                 )
             }
 
-            // Exact alarms permission
+            // 3. Exact alarms permission (CRITICAL)
             item {
                 PermissionItem(
                     title = "Schedule Exact Alarms",
-                    subtitle = "Required for precise alarm timing",
+                    subtitle = "Critical: Required for precise alarm timing",
                     isGranted = permissionStatus.canScheduleExactAlarms,
-                    onClick = { permissionsHelper.openAlarmSettings() }
+                    onClick = { permissionsHelper.openAlarmSettings() },
+                    buttonText = if (permissionStatus.canScheduleExactAlarms) null else "Configure"
                 )
             }
 
-            // Full-screen intent permission
-            item {
-                PermissionItem(
-                    title = "Full-Screen Notifications",
-                    subtitle = "Show alarms when phone is locked",
-                    isGranted = permissionStatus.canUseFullScreenIntent,
-                    onClick = { permissionsHelper.openFullScreenIntentSettings() }
-                )
-            }
-
-            // Battery optimization
+            // 4. Battery optimization (IMPORTANT for reliability)
             item {
                 PermissionItem(
                     title = "Battery Optimization",
-                    subtitle = "Disable for reliable background operation",
+                    subtitle = "Important: Disable for reliable background operation",
                     isGranted = permissionStatus.batteryOptimizationDisabled,
-                    onClick = { permissionsHelper.openBatteryOptimizationSettings() }
+                    onClick = {
+                        if (!permissionStatus.batteryOptimizationDisabled) {
+                            permissionsHelper.requestIgnoreBatteryOptimization()
+                        }
+                    },
+                    buttonText = if (permissionStatus.batteryOptimizationDisabled) null else "Grant"
+                )
+            }
+
+            // 5. Full-screen intent permission (RECOMMENDED)
+            item {
+                PermissionItem(
+                    title = "Full-Screen Notifications",
+                    subtitle = "Recommended: Show alarms when phone is locked",
+                    isGranted = permissionStatus.canUseFullScreenIntent,
+                    onClick = { permissionsHelper.openFullScreenIntentSettings() },
+                    buttonText = if (permissionStatus.canUseFullScreenIntent) null else "Configure"
                 )
             }
 
@@ -218,24 +282,24 @@ fun SettingsScreen(
                 Divider(modifier = Modifier.padding(horizontal = 16.dp))
             }
 
-            // Experimental View Settings
+            // Main Screen Settings
             if (state.settings.uiMode == UiMode.EXPERIMENTAL) {
                 item {
-                    SettingsSectionHeader(title = "Experimental View")
+                    SettingsSectionHeader(title = "Main Screen")
                 }
 
                 item {
                     SettingsItem(
-                        title = "Recent alarms count",
-                        subtitle = "${state.settings.maxRecentAlarms} alarms",
+                        title = "Show recent alarms",
+                        subtitle = "Display up to ${state.settings.maxRecentAlarms} alarms",
                         onClick = { /* TODO: Show number picker */ }
                     )
                 }
 
                 item {
                     SettingsItem(
-                        title = "Recent timers count",
-                        subtitle = "${state.settings.maxRecentTimers} timers",
+                        title = "Show recent timers",
+                        subtitle = "Display up to ${state.settings.maxRecentTimers} timers",
                         onClick = { /* TODO: Show number picker */ }
                     )
                 }
@@ -363,7 +427,8 @@ private fun PermissionItem(
     title: String,
     subtitle: String,
     isGranted: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    buttonText: String? = null
 ) {
     ListItem(
         headlineContent = {
@@ -387,9 +452,14 @@ private fun PermissionItem(
             )
         },
         trailingContent = {
-            if (!isGranted) {
-                OutlinedButton(onClick = onClick) {
-                    Text("Open Settings")
+            if (!isGranted && buttonText != null) {
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(buttonText)
                 }
             }
         },
@@ -430,8 +500,8 @@ private fun UiModeDialog(
                             )
                             Text(
                                 text = when (mode) {
-                                    UiMode.CLASSIC -> "Traditional layout with tabs"
                                     UiMode.EXPERIMENTAL -> "All features on one screen with voice button"
+                                    UiMode.CLASSIC -> "Traditional layout with tabs"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -45,6 +45,7 @@ fun MainScreen(
             ExperimentalHomeScreen(
                 recentAlarms = state.recentAlarms,
                 recentTimers = state.recentTimers,
+                use24HourFormat = state.settings.use24HourFormat,
                 onToggleAlarm = { alarmId, isEnabled ->
                     viewModel.toggleAlarm(alarmId, isEnabled)
                 },
@@ -62,10 +63,10 @@ fun MainScreen(
                     viewModel.deleteTimer(timerId)
                 },
                 onEditTimer = onNavigateToEditTimer,
-                onVoiceCommand = onVoiceCommand,
                 onCreateAlarm = onNavigateToCreateAlarm,
                 onCreateTimer = onNavigateToCreateTimer,
                 onNavigateToSettings = onNavigateToSettings,
+                onVoiceCommand = onVoiceCommand,
                 modifier = modifier
             )
         }

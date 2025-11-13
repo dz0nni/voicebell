@@ -1,5 +1,14 @@
 package com.voicebell.clock.presentation.screens.home
 
+import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
@@ -17,17 +26,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.voicebell.clock.domain.model.Alarm
 import com.voicebell.clock.domain.model.Timer
+import com.voicebell.clock.presentation.screens.voice.VoiceCommandEvent
+import com.voicebell.clock.presentation.screens.voice.VoiceCommandViewModel
+import com.voicebell.clock.service.VoiceRecognitionService
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * Experimental home screen with all features on single screen:
+ * Main home screen with all features on single screen:
  * - Recent alarms at top (enable/disable toggles)
  * - Recent timers below (restart buttons)
- * - Large voice command button in center
- * - Stopwatch quick launch at bottom
+ * - Large voice command button at bottom
+ * - Stopwatch card at top (toggleable)
  * - Expandable FAB with quick add alarm/timer
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +53,7 @@ import com.voicebell.clock.domain.model.Timer
 fun ExperimentalHomeScreen(
     recentAlarms: List<Alarm>,
     recentTimers: List<Timer>,
+    use24HourFormat: Boolean,
     onToggleAlarm: (Long, Boolean) -> Unit,
     onEditAlarm: (Long) -> Unit,
     onDeleteAlarm: (Long) -> Unit,
@@ -42,51 +61,111 @@ fun ExperimentalHomeScreen(
     onStopTimer: (Long) -> Unit,
     onDeleteTimer: (Long) -> Unit,
     onEditTimer: (Long) -> Unit,
-    onVoiceCommand: () -> Unit,
     onCreateAlarm: () -> Unit,
     onCreateTimer: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    modifier: Modifier = Modifier
+    onVoiceCommand: () -> Unit,
+    modifier: Modifier = Modifier,
+    voiceViewModel: VoiceCommandViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val voiceState by voiceViewModel.state.collectAsStateWithLifecycle()
     var isFabExpanded by remember { mutableStateOf(false) }
+    var isStopwatchVisible by remember { mutableStateOf(false) }
+
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
+        if (!isGranted) {
+            voiceViewModel.onEvent(VoiceCommandEvent.ShowError("Microphone permission is required"))
+        }
+    }
+
+    // Register broadcast receiver for voice recognition results
+    // Note: Duplicate execution is prevented by ViewModel's deduplication logic
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val text = intent?.getStringExtra(VoiceRecognitionService.EXTRA_RESULT_TEXT)
+                val success = intent?.getBooleanExtra(VoiceRecognitionService.EXTRA_RESULT_SUCCESS, false) ?: false
+
+                if (success && text != null) {
+                    voiceViewModel.onEvent(VoiceCommandEvent.RecognitionResult(text))
+                } else {
+                    voiceViewModel.onEvent(VoiceCommandEvent.ShowError(text ?: "Recognition failed"))
+                }
+            }
+        }
+
+        val filter = IntentFilter(VoiceRecognitionService.ACTION_RESULT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "VoiceBell",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Experimental View",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = "VoiceBell",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 actions = {
-                    // Voice Command button
+                    // Voice Command Debug button (stats for geeks)
                     IconButton(onClick = onVoiceCommand) {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            tonalElevation = 4.dp
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Voice Debug (stats for geeks)",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+
+                    // Stopwatch toggle button
+                    IconButton(onClick = { isStopwatchVisible = !isStopwatchVisible }) {
+                        if (isStopwatchVisible) {
+                            Surface(
+                                modifier = Modifier.size(40.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                tonalElevation = 4.dp
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Mic,
-                                    contentDescription = "Voice Command",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimary
-                                )
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Timer,
+                                        contentDescription = "Toggle Stopwatch",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
                             }
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = "Toggle Stopwatch",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                     // Settings button
@@ -115,6 +194,24 @@ fun ExperimentalHomeScreen(
                     isFabExpanded = false
                 }
             )
+        },
+        bottomBar = {
+            VoiceCommandBottomBar(
+                isListening = voiceState.isListening,
+                hasPermission = hasAudioPermission,
+                onStartListening = {
+                    if (hasAudioPermission) {
+                        voiceViewModel.onEvent(VoiceCommandEvent.StartListening)
+                        VoiceRecognitionService.startListening(context)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onStopListening = {
+                    voiceViewModel.onEvent(VoiceCommandEvent.StopListening)
+                    VoiceRecognitionService.stopListening(context)
+                }
+            )
         }
     ) { paddingValues ->
         LazyColumn(
@@ -125,6 +222,42 @@ fun ExperimentalHomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
+            // Integrated Stopwatch Card (shown when toggled with slide animation)
+            item {
+                AnimatedVisibility(
+                    visible = isStopwatchVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { -it }, // Slide from top (negative offset)
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { -it }, // Slide to top (negative offset)
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut()
+                ) {
+                    IntegratedStopwatchCard(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            // Empty state when no alarms or timers
+            if (recentAlarms.isEmpty() && recentTimers.isEmpty()) {
+                item {
+                    EmptyStateView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp)
+                    )
+                }
+            }
+
             // Recent Alarms Section
             if (recentAlarms.isNotEmpty()) {
                 item {
@@ -137,6 +270,7 @@ fun ExperimentalHomeScreen(
                 items(recentAlarms) { alarm ->
                     CompactAlarmCard(
                         alarm = alarm,
+                        use24HourFormat = use24HourFormat,
                         onToggle = onToggleAlarm,
                         onDelete = { onDeleteAlarm(alarm.id) },
                         onClick = { onEditAlarm(alarm.id) }
@@ -164,14 +298,7 @@ fun ExperimentalHomeScreen(
                 }
             }
 
-            // Integrated Stopwatch Card
-            item {
-                IntegratedStopwatchCard(
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Bottom spacing for FAB
+            // Bottom spacing for FAB and bottom bar
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
@@ -212,6 +339,7 @@ private fun SectionHeader(
 @Composable
 private fun CompactAlarmCard(
     alarm: Alarm,
+    use24HourFormat: Boolean,
     onToggle: (Long, Boolean) -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit
@@ -268,7 +396,7 @@ private fun CompactAlarmCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = alarm.getFormattedTime(),
+                    text = alarm.getFormattedTime(use24HourFormat),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (alarm.isEnabled) {
@@ -517,16 +645,6 @@ private fun IntegratedStopwatchCard(
         }
     }
 
-    // Animate card height - stays large when paused, only resets to small on reset
-    val cardHeight by animateDpAsState(
-        targetValue = if (isRunning || elapsedMillis > 0) 120.dp else 80.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "cardHeight"
-    )
-
     // Format time as 00:00.000
     val formattedTime = remember(elapsedMillis) {
         val totalSeconds = elapsedMillis / 1000
@@ -563,7 +681,7 @@ private fun IntegratedStopwatchCard(
 
     Card(
         modifier = modifier
-            .height(cardHeight)
+            .height(120.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
@@ -574,13 +692,7 @@ private fun IntegratedStopwatchCard(
                 )
             },
         colors = CardDefaults.cardColors(
-            containerColor = if (isRunning) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else if (elapsedMillis > 0) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
         )
     ) {
         Row(
@@ -593,19 +705,9 @@ private fun IntegratedStopwatchCard(
             // Time display
             Text(
                 text = formattedTime,
-                style = if (isRunning || elapsedMillis > 0) {
-                    MaterialTheme.typography.displayMedium
-                } else {
-                    MaterialTheme.typography.headlineMedium
-                },
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isRunning) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else if (elapsedMillis > 0) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color = MaterialTheme.colorScheme.onTertiaryContainer
             )
 
             // Stopwatch/Pause button
@@ -613,15 +715,9 @@ private fun IntegratedStopwatchCard(
                 onClick = { isRunning = !isRunning }
             ) {
                 Icon(
-                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.Timer,
+                    imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isRunning) "Pause" else "Start",
-                    tint = if (isRunning) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else if (elapsedMillis > 0) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -801,5 +897,224 @@ private fun formatMillisToTime(millis: Long): String {
         String.format("%02d:%02d:%02d", hours, minutes, seconds)
     } else {
         String.format("%02d:%02d", minutes, seconds)
+    }
+}
+
+/**
+ * Empty state view shown when no alarms or timers exist
+ */
+@Composable
+private fun EmptyStateView(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Large microphone icon
+        Icon(
+            imageVector = Icons.Default.Mic,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Title text
+        Text(
+            text = "Use Voice Commands",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Subtitle text
+        Text(
+            text = "Press the microphone button at the bottom and try:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Examples
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "• \"Set alarm for 7 in the morning\"",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "• \"Set timer 5 minutes\"",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+/**
+ * Bottom bar with voice command button (sticky)
+ */
+@Composable
+private fun VoiceCommandBottomBar(
+    isListening: Boolean,
+    hasPermission: Boolean,
+    onStartListening: () -> Unit,
+    onStopListening: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            PushToTalkButton(
+                isListening = isListening,
+                enabled = hasPermission,
+                onStartListening = onStartListening,
+                onStopListening = onStopListening
+            )
+        }
+    }
+}
+
+/**
+ * Push-to-talk button for voice recognition
+ */
+@Composable
+private fun PushToTalkButton(
+    isListening: Boolean,
+    enabled: Boolean,
+    onStartListening: () -> Unit,
+    onStopListening: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+
+    var isHoldingMode by remember { mutableStateOf(false) }
+    var pressStartTime by remember { mutableStateOf(0L) }
+    var isProcessing by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isListening) 1.1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Box(
+        modifier = modifier.size(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Pulsing background when listening
+        if (isListening) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scale(scale),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.3f)
+            ) {}
+        }
+
+        // Main button
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .scale(scale)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            if (isProcessing) return@detectTapGestures
+
+                            pressStartTime = System.currentTimeMillis()
+
+                            if (!isListening) {
+                                isProcessing = true
+                                isHoldingMode = true
+                                scope.launch {
+                                    onStartListening()
+                                    delay(500)
+                                    isProcessing = false
+                                }
+                            }
+
+                            // Wait for release
+                            tryAwaitRelease()
+
+                            // Handle release
+                            val pressDuration = System.currentTimeMillis() - pressStartTime
+
+                            if (isHoldingMode && pressDuration < 300 && !isListening) {
+                                // Quick tap - do nothing, already stopped
+                            } else if (isListening) {
+                                // Stop listening on release
+                                scope.launch {
+                                    onStopListening()
+                                    delay(300)
+                                    isHoldingMode = false
+                                }
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                tonalElevation = if (isListening) 16.dp else 8.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Voice Command",
+                        modifier = Modifier.size(60.dp),
+                        tint = if (enabled) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+            }
+        }
     }
 }

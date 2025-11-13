@@ -100,12 +100,16 @@ data class Alarm(
     }
 
     /**
-     * Get formatted time string (e.g., "07:30 AM").
+     * Get formatted time string (e.g., "07:30 AM" or "19:30" in 24h format).
      */
-    fun getFormattedTime(): String {
-        val hour12 = if (time.hour == 0) 12 else if (time.hour > 12) time.hour - 12 else time.hour
-        val amPm = if (time.hour < 12) "AM" else "PM"
-        return String.format("%02d:%02d %s", hour12, time.minute, amPm)
+    fun getFormattedTime(use24Hour: Boolean = false): String {
+        return if (use24Hour) {
+            String.format("%02d:%02d", time.hour, time.minute)
+        } else {
+            val hour12 = if (time.hour == 0) 12 else if (time.hour > 12) time.hour - 12 else time.hour
+            val amPm = if (time.hour < 12) "AM" else "PM"
+            String.format("%02d:%02d %s", hour12, time.minute, amPm)
+        }
     }
 
     /**
