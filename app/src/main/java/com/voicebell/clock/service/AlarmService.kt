@@ -68,6 +68,9 @@ class AlarmService : Service() {
     @Inject
     lateinit var flashManager: FlashManager
 
+    @Inject
+    lateinit var activeServiceManager: com.voicebell.clock.util.ActiveServiceManager
+
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
@@ -107,6 +110,9 @@ class AlarmService : Service() {
 
     private fun startAlarm(alarmId: Long, isPreAlarm: Boolean) {
         Log.d(TAG, "Starting alarm: id=$alarmId, isPreAlarm=$isPreAlarm")
+
+        // Mark alarm as active
+        activeServiceManager.setAlarmActive(alarmId)
 
         // Start foreground service
         val notification = createForegroundNotification(alarmId, isPreAlarm)
@@ -330,6 +336,9 @@ class AlarmService : Service() {
     private fun dismissAlarm() {
         Log.d(TAG, "Dismissing alarm")
 
+        // Clear active alarm
+        activeServiceManager.clearActiveAlarm()
+
         // Reset snooze count
         serviceScope.launch {
             if (currentAlarmId != -1L) {
@@ -343,6 +352,9 @@ class AlarmService : Service() {
 
     private fun snoozeAlarm() {
         Log.d(TAG, "Snoozing alarm")
+
+        // Clear active alarm
+        activeServiceManager.clearActiveAlarm()
 
         serviceScope.launch {
             if (currentAlarmId != -1L) {
