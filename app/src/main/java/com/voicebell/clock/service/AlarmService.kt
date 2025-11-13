@@ -278,19 +278,52 @@ class AlarmService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Dismiss action
+        val dismissIntent = Intent(this, AlarmService::class.java).apply {
+            action = ACTION_DISMISS_ALARM
+        }
+        val dismissPendingIntent = PendingIntent.getService(
+            this,
+            1,
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Snooze action
+        val snoozeIntent = Intent(this, AlarmService::class.java).apply {
+            action = ACTION_SNOOZE_ALARM
+        }
+        val snoozePendingIntent = PendingIntent.getService(
+            this,
+            2,
+            snoozeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val title = if (isPreAlarm) "Pre-Alarm" else "Alarm"
-        val content = "Tap to view"
+        val content = "Tap Snooze or Dismiss"
 
         return NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID_ALARM_SERVICE)
             .setContentTitle(title)
             .setContentText(content)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Add proper icon
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setFullScreenIntent(pendingIntent, true) // Enable full-screen intent for locked screen
             .setOngoing(true)
             .setAutoCancel(false)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            // Add large action buttons
+            .addAction(
+                R.drawable.ic_launcher_foreground, // TODO: Add snooze icon
+                "Snooze",
+                snoozePendingIntent
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground, // TODO: Add dismiss icon
+                "Dismiss",
+                dismissPendingIntent
+            )
             .build()
     }
 
