@@ -174,10 +174,12 @@ class AlarmService : Service() {
     }
 
     private fun startAlarmSound(gradualVolume: Boolean, volumeLevel: Int) {
+        // Tier 1: Try system default alarm sound
         try {
-            // Get default alarm sound
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+            Log.d(TAG, "Attempting to play primary alarm sound: $alarmUri")
 
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(applicationContext, alarmUri)
@@ -191,6 +193,14 @@ class AlarmService : Service() {
 
                 isLooping = true
 
+                // Set OnErrorListener to handle runtime MediaPlayer errors
+                setOnErrorListener { mp, what, extra ->
+                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    // Try fallback sound
+                    playFallbackAlarm(gradualVolume, volumeLevel)
+                    true // Error handled
+                }
+
                 // Set initial volume
                 if (gradualVolume) {
                     setVolume(0f, 0f)
@@ -203,13 +213,107 @@ class AlarmService : Service() {
                 start()
             }
 
+            Log.d(TAG, "Primary alarm sound started successfully")
+
             // Gradual volume increase
             if (gradualVolume) {
                 startGradualVolumeIncrease(volumeLevel)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting alarm sound", e)
+            Log.e(TAG, "Failed to play primary alarm sound", e)
+            // Tier 2: Try fallback sound
+            playFallbackAlarm(gradualVolume, volumeLevel)
+        }
+    }
+
+    /**
+     * Tier 2: Play bundled fallback alarm sound (AOSP-style safety net)
+     */
+    private fun playFallbackAlarm(gradualVolume: Boolean, volumeLevel: Int) {
+        try {
+            Log.w(TAG, "Attempting to play bundled fallback alarm sound")
+
+            // Clean up any existing MediaPlayer
+            mediaPlayer?.release()
+
+            val afd = applicationContext.resources.openRawResourceFd(R.raw.alarm_fallback)
+
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                afd.close()
+
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+
+                isLooping = true
+
+                // Set OnErrorListener for fallback too
+                setOnErrorListener { mp, what, extra ->
+                    Log.e(TAG, "Fallback MediaPlayer error: what=$what, extra=$extra")
+                    // Last resort: emergency vibration
+                    startEmergencyVibration()
+                    true
+                }
+
+                // Set initial volume
+                if (gradualVolume) {
+                    setVolume(0f, 0f)
+                } else {
+                    val volume = volumeLevel / 100f
+                    setVolume(volume, volume)
+                }
+
+                prepare()
+                start()
+            }
+
+            Log.w(TAG, "Fallback alarm sound started successfully")
+
+            // Gradual volume increase
+            if (gradualVolume) {
+                startGradualVolumeIncrease(volumeLevel)
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play fallback alarm sound - CRITICAL FAILURE", e)
+            // Tier 3: Emergency vibration as last resort
+            startEmergencyVibration()
+        }
+    }
+
+    /**
+     * Tier 3: Emergency vibration when all sound playback fails (last resort)
+     * Uses continuous strong vibration to ensure user is alerted
+     */
+    private fun startEmergencyVibration() {
+        Log.e(TAG, "⚠️ EMERGENCY: All alarm sounds failed! Using emergency vibration.")
+
+        try {
+            vibrator?.let {
+                // Strong continuous vibration pattern: 100ms off, 500ms on
+                val emergencyPattern = longArrayOf(100, 500)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val effect = VibrationEffect.createWaveform(
+                        emergencyPattern,
+                        intArrayOf(0, 255), // Max amplitude for strong vibration
+                        0 // Repeat from index 0
+                    )
+                    it.vibrate(effect)
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(emergencyPattern, 0)
+                }
+                Log.w(TAG, "Emergency vibration activated")
+            } ?: run {
+                Log.e(TAG, "⚠️ CRITICAL: No vibrator available - silent alarm!")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "⚠️ CRITICAL: Emergency vibration failed - completely silent alarm!", e)
         }
     }
 
