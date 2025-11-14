@@ -270,10 +270,20 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
      *
      * Common fixes:
      * - "then" → "ten" (e.g., "eight then" → "eight ten" → 08:10)
+     * - "won" → "one" (e.g., "alarm won thirty" → "alarm one thirty" → 01:30)
+     * - "ate" → "eight" (e.g., "alarm ate thirty" → "alarm eight thirty" → 08:30)
+     * - "said" → "set" (e.g., "said alarm" → "set alarm")
      */
     private fun normalizeRecognizedText(text: String): String {
-        // Replace "then" with "ten" (case-insensitive, word boundaries)
-        return text.replace(Regex("\\bthen\\b", RegexOption.IGNORE_CASE), "ten")
+        var normalized = text
+
+        // Replace common misheard words (case-insensitive, word boundaries)
+        normalized = normalized.replace(Regex("\\bthen\\b", RegexOption.IGNORE_CASE), "ten")
+        normalized = normalized.replace(Regex("\\bwon\\b", RegexOption.IGNORE_CASE), "one")
+        normalized = normalized.replace(Regex("\\bate\\b", RegexOption.IGNORE_CASE), "eight")
+        normalized = normalized.replace(Regex("\\bsaid\\b", RegexOption.IGNORE_CASE), "set")
+
+        return normalized
     }
 }
 
