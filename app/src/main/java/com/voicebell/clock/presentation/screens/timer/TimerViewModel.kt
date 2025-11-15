@@ -115,11 +115,6 @@ class TimerViewModel @Inject constructor(
                 return@launch
             }
 
-            if (currentState.activeTimer != null) {
-                _state.update { it.copy(errorMessage = "A timer is already running") }
-                return@launch
-            }
-
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
@@ -284,11 +279,6 @@ class TimerViewModel @Inject constructor(
      */
     private fun restartTimer(timer: Timer) {
         viewModelScope.launch {
-            if (_state.value.activeTimer != null) {
-                _state.update { it.copy(errorMessage = "A timer is already running") }
-                return@launch
-            }
-
             try {
                 startTimerUseCase(
                     durationMillis = timer.durationMillis,

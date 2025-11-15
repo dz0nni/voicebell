@@ -61,7 +61,7 @@ data class TimerState(
      * Whether start button should be enabled
      */
     val canStart: Boolean
-        get() = inputDurationMillis > 0 && activeTimer == null
+        get() = inputDurationMillis > 0
 
     /**
      * Whether there are recent timers to show

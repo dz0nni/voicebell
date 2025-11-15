@@ -17,8 +17,8 @@ android {
         applicationId = "com.voicebell.clock"
         minSdk = 29
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.1.16"
+        versionCode = 18
+        versionName = "0.1.17"
 
         testInstrumentationRunner = "com.voicebell.clock.HiltTestRunner"
         vectorDrawables {

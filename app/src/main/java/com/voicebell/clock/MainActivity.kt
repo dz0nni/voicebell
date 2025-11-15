@@ -2,6 +2,7 @@ package com.voicebell.clock
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -13,13 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.voicebell.clock.presentation.navigation.NavGraph
 import com.voicebell.clock.presentation.theme.VoiceBellTheme
 import com.voicebell.clock.service.AlarmService
 import com.voicebell.clock.util.ActiveServiceManager
+import com.voicebell.clock.util.VoskModelManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -34,8 +38,18 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var activeServiceManager: ActiveServiceManager
 
+    @Inject
+    lateinit var voskModelManager: VoskModelManager
+
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Auto-extract Vosk model if not already extracted
+        checkAndExtractVoskModel()
 
         setContent {
             VoiceBellTheme {
@@ -89,6 +103,30 @@ class MainActivity : ComponentActivity() {
             action = com.voicebell.clock.service.TimerService.ACTION_FINISH
         }
         startService(intent)
+    }
+
+    /**
+     * Check if Vosk model is extracted, and if not, extract it automatically in background.
+     * This runs silently without showing anything to the user.
+     */
+    private fun checkAndExtractVoskModel() {
+        lifecycleScope.launch {
+            try {
+                if (!voskModelManager.isModelDownloaded()) {
+                    Log.i(TAG, "Vosk model not found, extracting from assets...")
+                    val result = voskModelManager.extractModelFromAssets()
+                    if (result.isSuccess) {
+                        Log.i(TAG, "Vosk model extracted successfully")
+                    } else {
+                        Log.e(TAG, "Failed to extract Vosk model: ${result.exceptionOrNull()?.message}")
+                    }
+                } else {
+                    Log.d(TAG, "Vosk model already extracted")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking/extracting Vosk model", e)
+            }
+        }
     }
 }
 

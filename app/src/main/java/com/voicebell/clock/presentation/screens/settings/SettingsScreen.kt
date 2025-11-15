@@ -130,15 +130,6 @@ fun SettingsScreen(
                 SettingsSectionHeader(title = "Voice Commands")
             }
 
-            item {
-                SettingsSwitchItem(
-                    title = "Enable Voice Commands",
-                    subtitle = "Use voice to set alarms and timers",
-                    checked = state.settings.voiceCommandEnabled,
-                    onCheckedChange = { viewModel.toggleVoiceCommand() }
-                )
-            }
-
             // Voice model download button
             item {
                 VoiceModelDownloadButton(
