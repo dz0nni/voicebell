@@ -13,6 +13,17 @@ Want to test the current alpha version? Download the latest APK:
 
 ## Features
 
+### Voice Commands (100% Offline)
+Control your alarms and timers using natural English voice commands:
+- "Set alarm for 7 AM"
+- "Set timer for 5 minutes"
+- "Set alarm for 8:30 in the morning"
+- "Set timer for 10 minutes"
+
+All voice processing happens 100% on-device using [Vosk](https://alphacephei.com/vosk/) - no internet required.
+
+See [VOICE_COMMANDS.md](VOICE_COMMANDS.md) for complete list.
+
 ### Core Functionality
 - **Alarms** with full customization
   - Repeating alarms with weekday selection
@@ -21,22 +32,12 @@ Want to test the current alpha version? Download the latest APK:
   - Pre-alarms (1-10 configurable pre-alarms before main alarm)
   - Multiple alarm tones
   - Per-alarm vibration and flash options
+  - 3-tier fallback system (prevents silent alarms)
   - Respects system alarm volume settings
 
 - **Timer** with voice and manual controls
 
 - **Stopwatch** with lap tracking
-
-- **World Clocks** for multiple time zones
-
-### Voice Commands (100% Offline)
-Control your alarms and timers using natural English voice commands:
-- "Set alarm for 7 AM"
-- "Set timer for 5 minutes"
-- "Cancel alarm"
-- "What alarms are set?"
-
-See [VOICE_COMMANDS.md](VOICE_COMMANDS.md) for complete list.
 
 ### Privacy First
 - **No Internet permission** - works 100% offline
@@ -46,14 +47,12 @@ See [VOICE_COMMANDS.md](VOICE_COMMANDS.md) for complete list.
 
 ### Modern Design
 - Material Design 3 (Material You) with dynamic theming
-- **Two UI modes**: Switch between Classic and Experimental layouts
-  - **Classic Mode**: Traditional tab-based navigation (Alarm, Clock, Timer, Stopwatch)
-  - **Experimental Mode**: All-in-one screen with:
-    - Recent alarms at top (quick enable/disable)
-    - Recent timers with restart buttons
-    - Large voice command button
-    - Quick stopwatch access
-    - Expandable FAB for quick alarm/timer creation
+- **All-in-one screen** with:
+  - Recent alarms at top (quick enable/disable)
+  - Recent timers with restart buttons
+  - Large voice command button
+  - Quick stopwatch access
+  - Expandable FAB for quick alarm/timer creation
 - Adaptive layouts for phones and tablets
 - Dark mode support
 - Clean, intuitive interface
@@ -99,35 +98,19 @@ cd voicebell
 
 ## Usage
 
-### Switching UI Modes
-VoiceBell offers two different layouts to match your preference:
-
-**Classic Mode (Default):**
-- Traditional tab navigation at bottom
-- Separate screens for Alarm, Clock, Timer, and Stopwatch
-- Familiar interface for most users
-
-**Experimental Mode:**
-- All features on one screen
-- Recent alarms and timers at top for quick access
-- Large voice command button in center
-- Quick stopwatch launcher at bottom
-- Expandable FAB (+) for creating alarms/timers
-
-**To switch modes:**
-1. Tap the **Settings** icon (⚙️) in top right
-2. Select **UI Mode**
-3. Choose between Classic or Experimental
-4. The interface updates immediately
-
 ### Setting an Alarm
-1. Tap the **+** button on the Alarm tab
-2. Set your desired time
-3. Choose repeat days (optional)
-4. Customize alarm tone, vibration, flash, and other options
-5. Tap **Save**
+**Using Voice Commands (Recommended):**
+1. Tap the large microphone button on the main screen
+2. Speak your command: "Set alarm for 7 AM"
+3. Voice recognition confirms your alarm
 
-**Or use voice:** Tap the microphone button and say "Set alarm for 7 AM"
+**Manual Setup:**
+1. Tap the **+** button (FAB) on the main screen
+2. Select "Alarm"
+3. Set your desired time
+4. Choose repeat days (optional)
+5. Customize alarm tone, vibration, flash, and other options
+6. Tap **Save**
 
 ### Using Pre-Alarms
 For deep sleepers, enable pre-alarms to receive gentle notifications before your main alarm:
@@ -137,17 +120,45 @@ For deep sleepers, enable pre-alarms to receive gentle notifications before your
 4. Pre-alarms will start at `(count × interval)` minutes before main alarm
 
 ### Setting a Timer
-1. Go to the Timer tab
-2. Enter duration using the picker
-3. Tap **Start**
+**Using Voice Commands (Recommended):**
+1. Tap the large microphone button on the main screen
+2. Speak your command: "Set timer for 5 minutes"
+3. Voice recognition confirms your timer
 
-**Or use voice:** "Set timer for 5 minutes"
+**Manual Setup:**
+1. Tap the **+** button (FAB) on the main screen
+2. Select "Timer"
+3. Enter duration using the picker
+4. Tap **Start**
 
 ### Voice Commands
-1. Grant microphone permission when prompted
-2. Tap the microphone button on any screen
-3. Speak your command clearly in English
-4. Voice recognition works completely offline
+1. Grant microphone permission when prompted (Settings → Permissions)
+2. Download voice recognition model (Settings → Voice Commands → Setup)
+3. Tap the large microphone button on the main screen
+4. Speak your command clearly in English
+5. Voice recognition works completely offline
+
+### App Settings
+Access settings by tapping the ⚙️ icon in the top right corner:
+
+**Voice Commands:**
+- Enable/disable voice commands
+- Download offline voice recognition model (~40 MB)
+- Delete voice model to free up storage
+
+**Display:**
+- Toggle 24-hour format
+
+**Permissions:** (all required for full functionality)
+- Microphone Access (Critical - for voice commands)
+- Notifications (Critical - for alarm/timer alerts)
+- Schedule Exact Alarms (Critical - for precise alarm timing)
+- Battery Optimization (Important - for reliable background operation)
+- Full-Screen Notifications (Recommended - show alarms when phone is locked)
+
+**About:**
+- App version information
+- Open source licenses
 
 ## Privacy
 
@@ -264,9 +275,10 @@ GNU General Public License for more details.
 ## Roadmap
 
 - [x] Basic alarm functionality
-- [x] Voice command support
+- [x] Voice command support (offline)
 - [x] Timer and stopwatch
-- [x] World clocks
+- [x] 3-tier alarm fallback system (prevents silent alarms)
+- [ ] World clocks for multiple time zones
 - [ ] Alarm challenges (math problems, shake to dismiss)
 - [ ] Custom alarm sounds from storage
 - [ ] Sleep timer
