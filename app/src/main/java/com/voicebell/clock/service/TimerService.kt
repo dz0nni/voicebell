@@ -10,6 +10,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -224,29 +225,35 @@ class TimerService : Service() {
                     startVibration()
                 }
 
-                // DUAL-LAUNCH STRATEGY for 100% reliability:
-                // Strategy 1: Full-screen intent notification (works via system UID on locked screens)
+                // Check if screen is interactive (on and unlocked)
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                val isScreenOn = powerManager.isInteractive
+                Log.d(TAG, "Screen interactive: $isScreenOn")
+
+                // STRATEGY: Launch Activity FIRST when screen is on, then post notification
+                // This ensures full-screen activity shows immediately instead of heads-up notification
+                if (isScreenOn) {
+                    try {
+                        val activityIntent = Intent(applicationContext, TimerFinishedActivity::class.java).apply {
+                            putExtra(EXTRA_TIMER_ID, timerId)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        }
+                        applicationContext.startActivity(activityIntent)
+                        Log.d(TAG, "Direct Activity launch successful (screen on) for timer: $timerId")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Direct Activity launch failed: ${e.message}")
+                    }
+                }
+
+                // Always post notification (for lock screen and as fallback)
                 val notification = createFinishedNotification(timerId)
                 notificationHelper.notificationManager.notify(
                     NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
                     notification
                 )
                 Log.d(TAG, "Posted full-screen intent notification for timer: $timerId")
-
-                // Strategy 2: Direct Activity launch as fallback (handles unlocked screens + BAL edge cases)
-                // This ensures the Activity launches even if Android 14 BAL restrictions block notification intent
-                try {
-                    val activityIntent = Intent(applicationContext, com.voicebell.clock.presentation.screens.timer.TimerFinishedActivity::class.java).apply {
-                        putExtra(EXTRA_TIMER_ID, timerId)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    }
-                    applicationContext.startActivity(activityIntent)
-                    Log.d(TAG, "Direct Activity launch successful for timer: $timerId")
-                } catch (e: Exception) {
-                    // Direct launch may fail due to Android 14 BAL restrictions when service is in
-                    // FOREGROUND_SERVICE state, but notification's fullScreenIntent will handle it
-                    Log.w(TAG, "Direct Activity launch blocked (BAL restriction), relying on fullScreenIntent: ${e.message}")
-                }
 
                 // TimerFinishedActivity will handle voice recognition in its onCreate()
 
