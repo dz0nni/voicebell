@@ -73,7 +73,12 @@ class TimerService : Service() {
     @Inject
     lateinit var voskModelManager: com.voicebell.clock.util.VoskModelManager
 
+    @Inject
+    lateinit var settingsRepository: com.voicebell.clock.domain.repository.SettingsRepository
+
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    private var bluetoothHeadsetDetector: com.voicebell.clock.util.BluetoothHeadsetDetector? = null
+    private var timerAudioPlayer: com.voicebell.clock.util.TimerAudioPlayer? = null
     private val updateJobs = mutableMapOf<Long, Job>()  // Track multiple timer jobs
     private val mediaPlayers = mutableMapOf<Long, MediaPlayer>()  // Track multiple alarms
     private var vibrator: Vibrator? = null
@@ -88,6 +93,8 @@ class TimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         initializeVibrator()
+        bluetoothHeadsetDetector = com.voicebell.clock.util.BluetoothHeadsetDetector(applicationContext)
+        timerAudioPlayer = com.voicebell.clock.util.TimerAudioPlayer(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -239,40 +246,70 @@ class TimerService : Service() {
                 // Mark timer as finished in database
                 timerRepository.markAsFinished(timerId)
 
-                // Play alarm sound for this specific timer
-                playAlarmSound(timerId)
+                // Check if Bluetooth headphones mode is enabled
+                val settings = settingsRepository.getSettings()
+                val isBluetoothConnected = bluetoothHeadsetDetector?.isBluetoothHeadsetConnected() ?: false
+                val useBluetoothOnly = settings.playTimerSoundOnlyToBluetooth
 
-                // Vibrate if enabled
-                if (vibrate) {
-                    startVibration()
+                if (isBluetoothConnected && useBluetoothOnly) {
+                    Log.d(TAG, "Bluetooth headphones detected, playing audio to headphones only")
+
+                    // Post SILENT notification (no sound/vibrate)
+                    val notification = createFinishedNotification(timerId, silent = true)
+                    notificationHelper.notificationManager.notify(
+                        NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
+                        notification
+                    )
+                    Log.d(TAG, "Posted silent timer finished notification for timer: $timerId")
+
+                    // Remove from active jobs
+                    updateJobs.remove(timerId)
+
+                    // Play audio to Bluetooth headphones
+                    timerAudioPlayer?.playTimerFinishedSound {
+                        // Auto-dismiss after audio playback completes
+                        Log.d(TAG, "Bluetooth audio playback completed, auto-dismissing timer: $timerId")
+                        serviceScope.launch {
+                            finishTimer(timerId)
+                        }
+                    }
+                } else {
+                    // Normal behavior: play alarm from phone speaker
+                    Log.d(TAG, "Using normal alarm behavior (phone speaker)")
+
+                    // Play alarm sound for this specific timer
+                    playAlarmSound(timerId)
+
+                    // Vibrate if enabled
+                    if (vibrate) {
+                        startVibration()
+                    }
+
+                    // Start voice recognition directly in TimerService (avoids Android 14+ FGS restrictions)
+                    startVoiceRecognitionForStop(timerId)
+
+                    // Post notification with Dismiss button (for both lock screen and heads-up)
+                    val notification = createFinishedNotification(timerId, silent = false)
+                    notificationHelper.notificationManager.notify(
+                        NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
+                        notification
+                    )
+                    Log.d(TAG, "Posted timer finished notification for timer: $timerId")
+
+                    // Remove from active jobs
+                    updateJobs.remove(timerId)
+
+                    // Auto-stop alarm after 60 seconds
+                    delay(60000)
+                    Log.d(TAG, "Auto-stopping timer alarm: $timerId")
+                    stopAlarm(timerId)
+                    // Dismiss notification
+                    notificationHelper.notificationManager.cancel(
+                        NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
+                    )
+                    activeServiceManager.clearActiveTimer()
+                    stopSelfIfNoActiveTimers()
                 }
-
-                // Start voice recognition directly in TimerService (avoids Android 14+ FGS restrictions)
-                startVoiceRecognitionForStop(timerId)
-
-                // Post notification with Dismiss button (for both lock screen and heads-up)
-                val notification = createFinishedNotification(timerId)
-                notificationHelper.notificationManager.notify(
-                    NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
-                    notification
-                )
-                Log.d(TAG, "Posted timer finished notification for timer: $timerId")
-
-                // TimerFinishedActivity will handle voice recognition in its onCreate()
-
-                // Remove from active jobs
-                updateJobs.remove(timerId)
-
-                // Auto-stop alarm after 60 seconds
-                delay(60000)
-                Log.d(TAG, "Auto-stopping timer alarm: $timerId")
-                stopAlarm(timerId)
-                // Dismiss notification
-                notificationHelper.notificationManager.cancel(
-                    NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
-                )
-                activeServiceManager.clearActiveTimer()
-                stopSelfIfNoActiveTimers()
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling timer finish", e)
                 stopSelfIfNoActiveTimers()
@@ -469,7 +506,7 @@ class TimerService : Service() {
             .build()
     }
 
-    private fun createFinishedNotification(timerId: Long): Notification {
+    private fun createFinishedNotification(timerId: Long, silent: Boolean = false): Notification {
         // Full-screen intent opens TimerFinishedActivity (enables voice recognition)
         val activityIntent = Intent(this, com.voicebell.clock.presentation.screens.timer.TimerFinishedActivity::class.java).apply {
             putExtra(EXTRA_TIMER_ID, timerId)
@@ -494,19 +531,31 @@ class TimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID_TIMER_FINISHED)
+        val builder = NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID_TIMER_FINISHED)
             .setContentTitle("Timer Finished!")
-            .setContentText("Say 'STOP' or tap to dismiss")
             .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Add proper icon
             .setContentIntent(activityPendingIntent)
-            .setFullScreenIntent(activityPendingIntent, true)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibrate, lights for heads-up
             .addAction(0, "Dismiss", dismissPendingIntent) // Dismiss button
-            .build()
+
+        if (silent) {
+            // Silent mode for Bluetooth headphones
+            builder
+                .setContentText("Playing to Bluetooth headphones")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setOnlyAlertOnce(true) // Don't make sound/vibrate
+        } else {
+            // Normal mode with sound/vibrate
+            builder
+                .setContentText("Say 'STOP' or tap to dismiss")
+                .setFullScreenIntent(activityPendingIntent, true)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibrate, lights for heads-up
+        }
+
+        return builder.build()
     }
 
     private fun formatTime(millis: Long): String {
@@ -668,6 +717,10 @@ class TimerService : Service() {
         mediaPlayers.keys.toList().forEach { timerId ->
             stopAlarm(timerId)
         }
+
+        // Release audio player
+        timerAudioPlayer?.release()
+        timerAudioPlayer = null
 
         serviceScope.cancel()
     }
