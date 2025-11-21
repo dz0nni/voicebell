@@ -17,8 +17,8 @@ android {
         applicationId = "com.voicebell.clock"
         minSdk = 29
         targetSdk = 35
-        versionCode = 41
-        versionName = "0.1.40"
+        versionCode = 42
+        versionName = "0.1.41"
 
         testInstrumentationRunner = "com.voicebell.clock.HiltTestRunner"
         vectorDrawables {
@@ -28,7 +28,7 @@ android {
         // Exclude Vosk model from build to reduce APK size
         // Model will be downloaded on first launch
         ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
 
