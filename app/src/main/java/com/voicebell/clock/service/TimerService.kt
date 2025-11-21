@@ -82,6 +82,7 @@ class TimerService : Service() {
     private val updateJobs = mutableMapOf<Long, Job>()  // Track multiple timer jobs
     private val mediaPlayers = mutableMapOf<Long, MediaPlayer>()  // Track multiple alarms
     private var vibrator: Vibrator? = null
+    private var bluetoothWakeLock: PowerManager.WakeLock? = null
 
     // Voice recognition
     private var audioRecord: AudioRecord? = null
@@ -254,6 +255,9 @@ class TimerService : Service() {
                 if (isBluetoothConnected && useBluetoothOnly) {
                     Log.d(TAG, "Bluetooth headphones detected, playing audio to headphones only")
 
+                    // Acquire wake lock to keep CPU awake during audio playback (works on locked screen)
+                    acquireBluetoothWakeLock()
+
                     // Post SILENT notification (no sound/vibrate)
                     val notification = createFinishedNotification(timerId, silent = true)
                     notificationHelper.notificationManager.notify(
@@ -271,6 +275,7 @@ class TimerService : Service() {
                         Log.d(TAG, "Bluetooth audio playback completed, auto-dismissing timer: $timerId")
                         serviceScope.launch {
                             finishTimer(timerId)
+                            releaseBluetoothWakeLock()
                         }
                     }
                 } else {
@@ -351,6 +356,47 @@ class TimerService : Service() {
         Log.d(TAG, "Sent timer dismissed broadcast for timer: $actualTimerId")
 
         stopSelfIfNoActiveTimers()
+    }
+
+    /**
+     * Acquire wake lock for Bluetooth audio playback.
+     * Keeps CPU awake even when screen is locked, ensuring audio plays.
+     */
+    private fun acquireBluetoothWakeLock() {
+        try {
+            if (bluetoothWakeLock?.isHeld == true) {
+                Log.d(TAG, "Bluetooth wake lock already held")
+                return
+            }
+
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            bluetoothWakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "VoiceBell:BluetoothTimerAudio"
+            ).apply {
+                acquire(30000) // 30 seconds timeout (audio should finish well before this)
+            }
+            Log.d(TAG, "Acquired Bluetooth wake lock")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error acquiring wake lock", e)
+        }
+    }
+
+    /**
+     * Release wake lock after Bluetooth audio playback completes.
+     */
+    private fun releaseBluetoothWakeLock() {
+        try {
+            bluetoothWakeLock?.let { wakeLock ->
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                    Log.d(TAG, "Released Bluetooth wake lock")
+                }
+            }
+            bluetoothWakeLock = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing wake lock", e)
+        }
     }
 
     private fun playAlarmSound(timerId: Long) {
@@ -721,6 +767,9 @@ class TimerService : Service() {
         // Release audio player
         timerAudioPlayer?.release()
         timerAudioPlayer = null
+
+        // Release wake lock if held
+        releaseBluetoothWakeLock()
 
         serviceScope.cancel()
     }
