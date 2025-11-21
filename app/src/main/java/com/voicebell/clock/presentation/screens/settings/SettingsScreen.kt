@@ -600,13 +600,12 @@ private fun VoiceModelDownloadButton(
                     )
                 } else {
                     if (isModelDownloaded) {
-                        IconButton(onClick = onDelete) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete model",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Model ready",
+                            tint = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                            modifier = Modifier.size(40.dp)
+                        )
                     } else {
                         Button(onClick = onDownload) {
                             Icon(
