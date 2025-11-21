@@ -67,4 +67,10 @@ interface SettingsDao {
      */
     @Query("UPDATE settings SET autoDeleteFinishedTimer = :enabled WHERE id = 1")
     suspend fun updateAutoDeleteFinishedTimer(enabled: Boolean)
+
+    /**
+     * Update play timer sound only to Bluetooth headphones
+     */
+    @Query("UPDATE settings SET playTimerSoundOnlyToBluetooth = :enabled WHERE id = 1")
+    suspend fun updatePlayTimerSoundOnlyToBluetooth(enabled: Boolean)
 }

@@ -71,6 +71,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun togglePlayTimerSoundOnlyToBluetooth() {
+        viewModelScope.launch {
+            val newValue = !_state.value.settings.playTimerSoundOnlyToBluetooth
+            settingsRepository.updatePlayTimerSoundOnlyToBluetooth(newValue)
+        }
+    }
+
     private fun checkVoiceModelStatus() {
         _state.update {
             it.copy(isVoiceModelDownloaded = voskModelManager.isModelDownloaded())

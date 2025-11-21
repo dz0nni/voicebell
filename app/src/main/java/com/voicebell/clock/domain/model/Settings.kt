@@ -15,7 +15,8 @@ data class Settings(
     val voiceCommandEnabled: Boolean = true,
     val maxRecentAlarms: Int = 3,
     val maxRecentTimers: Int = 3,
-    val autoDeleteFinishedTimer: Boolean = false
+    val autoDeleteFinishedTimer: Boolean = false,
+    val playTimerSoundOnlyToBluetooth: Boolean = false
 )
 
 /**

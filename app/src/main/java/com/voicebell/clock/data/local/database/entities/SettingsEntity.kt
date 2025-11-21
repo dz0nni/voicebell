@@ -65,5 +65,10 @@ data class SettingsEntity(
     /**
      * Whether to automatically delete finished timers
      */
-    val autoDeleteFinishedTimer: Boolean = false
+    val autoDeleteFinishedTimer: Boolean = false,
+
+    /**
+     * Whether to play timer sound only to Bluetooth headphones when connected
+     */
+    val playTimerSoundOnlyToBluetooth: Boolean = false
 )

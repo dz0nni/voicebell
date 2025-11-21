@@ -58,6 +58,10 @@ class SettingsRepositoryImpl @Inject constructor(
         settingsDao.updateAutoDeleteFinishedTimer(enabled)
     }
 
+    override suspend fun updatePlayTimerSoundOnlyToBluetooth(enabled: Boolean) {
+        settingsDao.updatePlayTimerSoundOnlyToBluetooth(enabled)
+    }
+
     override suspend fun initializeDefaults() {
         // Check if settings already exist
         val existing = settingsDao.getSettings()

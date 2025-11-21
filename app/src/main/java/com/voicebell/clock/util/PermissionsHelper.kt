@@ -102,6 +102,21 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
+     * Check if BLUETOOTH_CONNECT permission is granted (Android 12+)
+     * Required to detect Bluetooth headset connection
+     */
+    fun isBluetoothConnectGranted(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Not needed on older versions
+        }
+    }
+
+    /**
      * Open app notification settings
      */
     fun openNotificationSettings() {
@@ -277,6 +292,17 @@ class PermissionsHelper @Inject constructor(
     }
 
     /**
+     * Open app settings page where user can grant Bluetooth permission
+     */
+    fun openBluetoothSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    /**
      * Get a summary of all permission statuses
      */
     data class PermissionStatus(
@@ -284,12 +310,13 @@ class PermissionsHelper @Inject constructor(
         val canScheduleExactAlarms: Boolean,
         val canUseFullScreenIntent: Boolean,
         val batteryOptimizationDisabled: Boolean,
-        val recordAudioGranted: Boolean
+        val recordAudioGranted: Boolean,
+        val bluetoothConnectGranted: Boolean
     ) {
         val allGranted: Boolean
             get() = notificationsEnabled && canScheduleExactAlarms &&
                    canUseFullScreenIntent && batteryOptimizationDisabled &&
-                   recordAudioGranted
+                   recordAudioGranted && bluetoothConnectGranted
 
         val criticalGranted: Boolean
             get() = recordAudioGranted && notificationsEnabled && canScheduleExactAlarms
@@ -304,7 +331,8 @@ class PermissionsHelper @Inject constructor(
             canScheduleExactAlarms = canScheduleExactAlarms(),
             canUseFullScreenIntent = canUseFullScreenIntent(),
             batteryOptimizationDisabled = isBatteryOptimizationDisabled(),
-            recordAudioGranted = isRecordAudioGranted()
+            recordAudioGranted = isRecordAudioGranted(),
+            bluetoothConnectGranted = isBluetoothConnectGranted()
         )
     }
 }

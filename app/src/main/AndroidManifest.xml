@@ -12,6 +12,9 @@
     <!-- Voice recognition permission -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Bluetooth permission (Android 12+) for detecting headset connection -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <!-- Notification permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

@@ -78,6 +78,12 @@ fun SettingsScreen(
         permissionStatus = permissionsHelper.getPermissionStatus()
     }
 
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        permissionStatus = permissionsHelper.getPermissionStatus()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -174,6 +180,15 @@ fun SettingsScreen(
                     subtitle = "Remove completed timers when starting a new one",
                     checked = state.settings.autoDeleteFinishedTimer,
                     onCheckedChange = { viewModel.toggleAutoDeleteFinishedTimer() }
+                )
+            }
+
+            item {
+                SettingsSwitchItem(
+                    title = "Bluetooth headphones only",
+                    subtitle = "Play timer alerts only to Bluetooth headphones when connected",
+                    checked = state.settings.playTimerSoundOnlyToBluetooth,
+                    onCheckedChange = { viewModel.togglePlayTimerSoundOnlyToBluetooth() }
                 )
             }
 
@@ -285,6 +300,23 @@ fun SettingsScreen(
                     isGranted = permissionStatus.canUseFullScreenIntent,
                     onClick = { permissionsHelper.openFullScreenIntentSettings() },
                     buttonText = if (permissionStatus.canUseFullScreenIntent) null else "Configure"
+                )
+            }
+
+            // 6. Bluetooth permission (OPTIONAL - for headset-only timer alerts)
+            item {
+                PermissionItem(
+                    title = "Bluetooth Access",
+                    subtitle = "Optional: Detect Bluetooth headsets for audio routing",
+                    isGranted = permissionStatus.bluetoothConnectGranted,
+                    onClick = {
+                        if (!permissionStatus.bluetoothConnectGranted) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                            }
+                        }
+                    },
+                    buttonText = if (permissionStatus.bluetoothConnectGranted) null else "Grant"
                 )
             }
 

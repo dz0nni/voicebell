@@ -20,7 +20,8 @@ fun SettingsEntity.toDomain(): Settings {
         voiceCommandEnabled = voiceCommandEnabled,
         maxRecentAlarms = maxRecentAlarms,
         maxRecentTimers = maxRecentTimers,
-        autoDeleteFinishedTimer = autoDeleteFinishedTimer
+        autoDeleteFinishedTimer = autoDeleteFinishedTimer,
+        playTimerSoundOnlyToBluetooth = playTimerSoundOnlyToBluetooth
     )
 }
 
@@ -40,6 +41,7 @@ fun Settings.toEntity(): SettingsEntity {
         voiceCommandEnabled = voiceCommandEnabled,
         maxRecentAlarms = maxRecentAlarms,
         maxRecentTimers = maxRecentTimers,
-        autoDeleteFinishedTimer = autoDeleteFinishedTimer
+        autoDeleteFinishedTimer = autoDeleteFinishedTimer,
+        playTimerSoundOnlyToBluetooth = playTimerSoundOnlyToBluetooth
     )
 }

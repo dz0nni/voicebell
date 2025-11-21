@@ -50,6 +50,11 @@ interface SettingsRepository {
     suspend fun updateAutoDeleteFinishedTimer(enabled: Boolean)
 
     /**
+     * Update play timer sound only to Bluetooth headphones setting
+     */
+    suspend fun updatePlayTimerSoundOnlyToBluetooth(enabled: Boolean)
+
+    /**
      * Initialize settings with defaults (called on first launch)
      */
     suspend fun initializeDefaults()
