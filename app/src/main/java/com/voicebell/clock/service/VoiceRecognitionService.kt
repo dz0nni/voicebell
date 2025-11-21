@@ -353,7 +353,9 @@ class VoiceRecognitionService : Service() {
 
                             if (containsStop && listenForStopCommand) {
                                 Log.d(TAG, "STOP command detected in final result: ${result.text}")
-                                // Broadcast "stop" immediately
+                                // Directly stop the active timer
+                                stopActiveTimer()
+                                // Broadcast "stop" for UI updates
                                 broadcastResult("stop", true, null)
                                 finalResultProcessed = true
                                 stopRecording()
@@ -426,6 +428,24 @@ class VoiceRecognitionService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error processing result", e)
             broadcastResult(null, false, "Processing error")
+        }
+    }
+
+    /**
+     * Stop the active timer directly (when "stop" voice command is detected).
+     */
+    private fun stopActiveTimer() {
+        try {
+            Log.d(TAG, "Stopping active timer via voice command")
+            val intent = Intent(applicationContext, TimerService::class.java).apply {
+                action = TimerService.ACTION_FINISH
+                // Use -1 as a signal to stop ANY active timer
+                putExtra(TimerService.EXTRA_TIMER_ID, -1L)
+            }
+            applicationContext.startService(intent)
+            Log.d(TAG, "Sent ACTION_FINISH to TimerService")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop timer", e)
         }
     }
 

@@ -225,35 +225,22 @@ class TimerService : Service() {
                     startVibration()
                 }
 
-                // Check if screen is interactive (on and unlocked)
-                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-                val isScreenOn = powerManager.isInteractive
-                Log.d(TAG, "Screen interactive: $isScreenOn")
-
-                // STRATEGY: Launch Activity FIRST when screen is on, then post notification
-                // This ensures full-screen activity shows immediately instead of heads-up notification
-                if (isScreenOn) {
-                    try {
-                        val activityIntent = Intent(applicationContext, TimerFinishedActivity::class.java).apply {
-                            putExtra(EXTRA_TIMER_ID, timerId)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        }
-                        applicationContext.startActivity(activityIntent)
-                        Log.d(TAG, "Direct Activity launch successful (screen on) for timer: $timerId")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Direct Activity launch failed: ${e.message}")
-                    }
+                // Start voice recognition service to listen for "stop" command
+                // This works regardless of whether full-screen activity or heads-up notification is shown
+                try {
+                    VoiceRecognitionService.startListening(applicationContext, listenForStopCommand = true)
+                    Log.d(TAG, "Started VoiceRecognitionService to listen for STOP command")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to start VoiceRecognitionService: ${e.message}")
                 }
 
-                // Always post notification (for lock screen and as fallback)
+                // Post notification with Dismiss button (for both lock screen and heads-up)
                 val notification = createFinishedNotification(timerId)
                 notificationHelper.notificationManager.notify(
                     NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
                     notification
                 )
-                Log.d(TAG, "Posted full-screen intent notification for timer: $timerId")
+                Log.d(TAG, "Posted timer finished notification for timer: $timerId")
 
                 // TimerFinishedActivity will handle voice recognition in its onCreate()
 
@@ -278,16 +265,33 @@ class TimerService : Service() {
     }
 
     private fun finishTimer(timerId: Long) {
-        Log.d(TAG, "Finishing timer (user dismissed): $timerId")
+        // If timerId is -1, stop the currently active timer (from voice command)
+        val actualTimerId = if (timerId == -1L) {
+            activeServiceManager.activeTimerId.value ?: run {
+                Log.w(TAG, "No active timer to finish")
+                return
+            }
+        } else {
+            timerId
+        }
+
+        Log.d(TAG, "Finishing timer (user dismissed): $actualTimerId")
 
         // Clear active timer
         activeServiceManager.clearActiveTimer()
 
         // Stop alarm and dismiss notification
-        stopAlarm(timerId)
+        stopAlarm(actualTimerId)
         notificationHelper.notificationManager.cancel(
-            NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
+            NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + actualTimerId.toInt()
         )
+
+        // Stop voice recognition service if running
+        try {
+            VoiceRecognitionService.stopListening(applicationContext)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to stop VoiceRecognitionService", e)
+        }
 
         stopSelfIfNoActiveTimers()
     }
@@ -458,6 +462,18 @@ class TimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Dismiss action - stops alarm directly from notification
+        val dismissIntent = Intent(this, TimerService::class.java).apply {
+            action = ACTION_FINISH
+            putExtra(EXTRA_TIMER_ID, timerId)
+        }
+        val dismissPendingIntent = PendingIntent.getService(
+            this,
+            timerId.toInt() + 1000, // Different request code
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID_TIMER_FINISHED)
             .setContentTitle("Timer Finished!")
             .setContentText("Say 'STOP' or tap to dismiss")
@@ -469,6 +485,7 @@ class TimerService : Service() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
             .setDefaults(NotificationCompat.DEFAULT_ALL) // Sound, vibrate, lights for heads-up
+            .addAction(0, "Dismiss", dismissPendingIntent) // Dismiss button
             .build()
     }
 
