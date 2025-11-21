@@ -58,9 +58,9 @@ class VoskWrapper @Inject constructor() {
      * Process audio chunk and return recognition result.
      *
      * @param audioData Raw audio data (PCM 16-bit, mono, 16kHz)
-     * @return Recognized text if final result available, null otherwise
+     * @return RecognitionResult with text and isFinal flag, or null if no result
      */
-    fun acceptAudioChunk(audioData: ByteArray): String? {
+    fun acceptAudioChunk(audioData: ByteArray): RecognitionResult? {
         val rec = recognizer ?: run {
             Log.w(TAG, "Recognizer not initialized")
             return null
@@ -71,7 +71,18 @@ class VoskWrapper @Inject constructor() {
                 // Final result available
                 val result = rec.result
                 Log.d(TAG, "Final result: $result")
-                result
+
+                // Parse final result text
+                try {
+                    val resultJson = org.json.JSONObject(result)
+                    val resultText = resultJson.optString("text", "").trim()
+                    if (resultText.isNotEmpty()) {
+                        return RecognitionResult(resultText, isFinal = true)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse final result", e)
+                }
+                null
             } else {
                 // Partial result (ongoing recognition)
                 val partial = rec.partialResult
@@ -84,6 +95,9 @@ class VoskWrapper @Inject constructor() {
                     if (partialText.isNotEmpty()) {
                         lastPartialText = partialText
                         Log.v(TAG, "Saved partial text: $lastPartialText")
+
+                        // Return partial result for real-time processing
+                        return RecognitionResult(partialText, isFinal = false)
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to parse partial result", e)
@@ -96,6 +110,14 @@ class VoskWrapper @Inject constructor() {
             null
         }
     }
+
+    /**
+     * Data class for recognition results.
+     */
+    data class RecognitionResult(
+        val text: String,
+        val isFinal: Boolean
+    )
 
     /**
      * Get the final recognition result.

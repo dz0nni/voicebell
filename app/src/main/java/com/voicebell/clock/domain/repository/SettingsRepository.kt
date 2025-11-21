@@ -45,6 +45,11 @@ interface SettingsRepository {
     suspend fun updateVoiceCommandEnabled(enabled: Boolean)
 
     /**
+     * Update auto-delete finished timer setting
+     */
+    suspend fun updateAutoDeleteFinishedTimer(enabled: Boolean)
+
+    /**
      * Initialize settings with defaults (called on first launch)
      */
     suspend fun initializeDefaults()

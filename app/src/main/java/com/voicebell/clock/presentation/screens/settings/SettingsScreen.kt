@@ -163,6 +163,24 @@ fun SettingsScreen(
                 Divider(modifier = Modifier.padding(horizontal = 16.dp))
             }
 
+            // Timer Section
+            item {
+                SettingsSectionHeader(title = "Timer")
+            }
+
+            item {
+                SettingsSwitchItem(
+                    title = "Auto-delete finished timers",
+                    subtitle = "Remove completed timers when starting a new one",
+                    checked = state.settings.autoDeleteFinishedTimer,
+                    onCheckedChange = { viewModel.toggleAutoDeleteFinishedTimer() }
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(horizontal = 16.dp))
+            }
+
             // Permissions Section
             item {
                 SettingsSectionHeader(title = "Permissions")

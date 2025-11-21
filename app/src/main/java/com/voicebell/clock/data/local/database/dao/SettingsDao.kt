@@ -61,4 +61,10 @@ interface SettingsDao {
      */
     @Query("UPDATE settings SET voiceCommandEnabled = :enabled WHERE id = 1")
     suspend fun updateVoiceCommandEnabled(enabled: Boolean)
+
+    /**
+     * Update auto delete finished timer
+     */
+    @Query("UPDATE settings SET autoDeleteFinishedTimer = :enabled WHERE id = 1")
+    suspend fun updateAutoDeleteFinishedTimer(enabled: Boolean)
 }

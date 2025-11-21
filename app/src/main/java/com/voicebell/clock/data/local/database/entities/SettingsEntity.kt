@@ -60,5 +60,10 @@ data class SettingsEntity(
     /**
      * Maximum number of recent timers to show in experimental view
      */
-    val maxRecentTimers: Int = 3
+    val maxRecentTimers: Int = 3,
+
+    /**
+     * Whether to automatically delete finished timers
+     */
+    val autoDeleteFinishedTimer: Boolean = false
 )

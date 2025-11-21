@@ -72,6 +72,7 @@ fun ExperimentalHomeScreen(
     val voiceState by voiceViewModel.state.collectAsStateWithLifecycle()
     var isFabExpanded by remember { mutableStateOf(false) }
     var isStopwatchVisible by remember { mutableStateOf(false) }
+    var showManualEditDialog by remember { mutableStateOf(false) }
 
     var hasAudioPermission by remember {
         mutableStateOf(
@@ -92,29 +93,36 @@ fun ExperimentalHomeScreen(
     }
 
     // Register broadcast receiver for voice recognition results
-    // Note: Duplicate execution is prevented by ViewModel's deduplication logic
+    // Duplicate command execution is prevented by ExecuteVoiceCommandUseCase (singleton)
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                android.util.Log.d("ExperimentalHomeScreen", "Broadcast received! Action: ${intent?.action}")
                 val text = intent?.getStringExtra(VoiceRecognitionService.EXTRA_RESULT_TEXT)
                 val success = intent?.getBooleanExtra(VoiceRecognitionService.EXTRA_RESULT_SUCCESS, false) ?: false
+                android.util.Log.d("ExperimentalHomeScreen", "Text: $text, Success: $success")
 
                 if (success && text != null) {
+                    android.util.Log.d("ExperimentalHomeScreen", "Sending RecognitionResult event to ViewModel")
                     voiceViewModel.onEvent(VoiceCommandEvent.RecognitionResult(text))
                 } else {
+                    android.util.Log.d("ExperimentalHomeScreen", "Sending ShowError event to ViewModel")
                     voiceViewModel.onEvent(VoiceCommandEvent.ShowError(text ?: "Recognition failed"))
                 }
             }
         }
 
         val filter = IntentFilter(VoiceRecognitionService.ACTION_RESULT)
+        android.util.Log.d("ExperimentalHomeScreen", "Registering receiver with filter: ${VoiceRecognitionService.ACTION_RESULT}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             context.registerReceiver(receiver, filter)
         }
+        android.util.Log.d("ExperimentalHomeScreen", "Receiver registered successfully")
 
         onDispose {
+            android.util.Log.d("ExperimentalHomeScreen", "Unregistering receiver")
             context.unregisterReceiver(receiver)
         }
     }
@@ -186,7 +194,7 @@ fun ExperimentalHomeScreen(
                 isExpanded = isFabExpanded,
                 onToggle = { isFabExpanded = !isFabExpanded },
                 onCreateAlarm = {
-                    onCreateAlarm()
+                    showManualEditDialog = true
                     isFabExpanded = false
                 },
                 onCreateTimer = {
@@ -273,7 +281,7 @@ fun ExperimentalHomeScreen(
                         use24HourFormat = use24HourFormat,
                         onToggle = onToggleAlarm,
                         onDelete = { onDeleteAlarm(alarm.id) },
-                        onClick = { onEditAlarm(alarm.id) }
+                        onClick = { showManualEditDialog = true }
                     )
                 }
             }
@@ -302,6 +310,41 @@ fun ExperimentalHomeScreen(
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
+        }
+
+        // Manual Edit Disabled Dialog
+        if (showManualEditDialog) {
+            AlertDialog(
+                onDismissRequest = { showManualEditDialog = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Manual Editing Disabled",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Manual alarm creation and editing is temporarily disabled for testing.\n\n" +
+                                "Please use voice commands to create alarms:\n\n" +
+                                "• \"Set alarm for 7 AM\"\n" +
+                                "• \"Set alarm for 8:30 in the morning\"\n\n" +
+                                "Press the microphone button at the bottom to start.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showManualEditDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
         }
     }
 }

@@ -19,7 +19,8 @@ fun SettingsEntity.toDomain(): Settings {
         defaultGradualVolumeEnabled = defaultGradualVolumeEnabled,
         voiceCommandEnabled = voiceCommandEnabled,
         maxRecentAlarms = maxRecentAlarms,
-        maxRecentTimers = maxRecentTimers
+        maxRecentTimers = maxRecentTimers,
+        autoDeleteFinishedTimer = autoDeleteFinishedTimer
     )
 }
 
@@ -38,6 +39,7 @@ fun Settings.toEntity(): SettingsEntity {
         defaultGradualVolumeEnabled = defaultGradualVolumeEnabled,
         voiceCommandEnabled = voiceCommandEnabled,
         maxRecentAlarms = maxRecentAlarms,
-        maxRecentTimers = maxRecentTimers
+        maxRecentTimers = maxRecentTimers,
+        autoDeleteFinishedTimer = autoDeleteFinishedTimer
     )
 }

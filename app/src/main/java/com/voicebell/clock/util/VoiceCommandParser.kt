@@ -22,11 +22,19 @@ class VoiceCommandParser @Inject constructor() {
         val normalizedText = text.lowercase().trim()
 
         return when {
+            isStopCommand(normalizedText) -> VoiceCommandResult.StopCommand
             isAlarmCommand(normalizedText) -> parseAlarmCommand(normalizedText)
             isTimerCommand(normalizedText) -> parseTimerCommand(normalizedText)
             // Fallback: try to infer command type from content
             else -> inferCommandFromContent(normalizedText, text)
         }
+    }
+
+    /**
+     * Checks if the text is a stop command.
+     */
+    private fun isStopCommand(text: String): Boolean {
+        return text.contains("stop")
     }
 
     /**
@@ -490,6 +498,11 @@ sealed class VoiceCommandResult {
         val durationMillis: Long,
         val label: String?
     ) : VoiceCommandResult()
+
+    /**
+     * Stop command - used to dismiss active timer/alarm.
+     */
+    object StopCommand : VoiceCommandResult()
 
     data class Unknown(val originalText: String) : VoiceCommandResult()
 

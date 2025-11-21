@@ -54,6 +54,10 @@ class SettingsRepositoryImpl @Inject constructor(
         settingsDao.updateVoiceCommandEnabled(enabled)
     }
 
+    override suspend fun updateAutoDeleteFinishedTimer(enabled: Boolean) {
+        settingsDao.updateAutoDeleteFinishedTimer(enabled)
+    }
+
     override suspend fun initializeDefaults() {
         // Check if settings already exist
         val existing = settingsDao.getSettings()

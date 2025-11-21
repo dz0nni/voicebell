@@ -28,19 +28,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun TimerScreen(
     onNavigateToSettings: () -> Unit,
+    onNavigateBack: () -> Unit = {},
     showTopBar: Boolean = true,
     viewModel: TimerViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Force recomposition every second when timer is running
-    val currentTime by produceState(initialValue = System.currentTimeMillis(), state.activeTimer) {
-        while (state.activeTimer?.isRunning == true && state.activeTimer?.isPaused == false) {
-            delay(1000)
-            value = System.currentTimeMillis()
-        }
-    }
 
     // Show error messages
     LaunchedEffect(state.errorMessage) {
@@ -83,57 +76,26 @@ fun TimerScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Active timer display
-            if (state.activeTimer != null) {
-                item {
-                    ActiveTimerCard(
-                        timer = state.activeTimer!!,
-                        onPause = { viewModel.onEvent(TimerEvent.PauseTimer) },
-                        onResume = { viewModel.onEvent(TimerEvent.ResumeTimer) },
-                        onStop = { viewModel.onEvent(TimerEvent.StopTimer) }
-                    )
-                }
-            }
-
-            // Timer input (only when no active timer)
-            if (state.activeTimer == null) {
-                item {
-                    TimerInputCard(
-                        hours = state.inputHours,
-                        minutes = state.inputMinutes,
-                        seconds = state.inputSeconds,
-                        label = state.inputLabel,
-                        vibrateEnabled = state.vibrateEnabled,
-                        canStart = state.canStart,
-                        isLoading = state.isLoading,
-                        onHoursChange = { viewModel.onEvent(TimerEvent.SetHours(it)) },
-                        onMinutesChange = { viewModel.onEvent(TimerEvent.SetMinutes(it)) },
-                        onSecondsChange = { viewModel.onEvent(TimerEvent.SetSeconds(it)) },
-                        onLabelChange = { viewModel.onEvent(TimerEvent.SetLabel(it)) },
-                        onVibrateToggle = { viewModel.onEvent(TimerEvent.ToggleVibrate(it)) },
-                        onStart = { viewModel.onEvent(TimerEvent.StartTimer) }
-                    )
-                }
-            }
-
-            // Recent timers
-            if (state.hasRecentTimers) {
-                item {
-                    Text(
-                        text = "Recent Timers",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-
-                items(state.timers.take(5)) { timer ->
-                    RecentTimerCard(
-                        timer = timer,
-                        onRestart = { viewModel.onEvent(TimerEvent.RestartTimer(timer)) },
-                        onDelete = { viewModel.onEvent(TimerEvent.DeleteTimer(timer.id)) }
-                    )
-                }
+            // Timer input (always shown, no active timer display)
+            item {
+                TimerInputCard(
+                    hours = state.inputHours,
+                    minutes = state.inputMinutes,
+                    seconds = state.inputSeconds,
+                    label = state.inputLabel,
+                    vibrateEnabled = state.vibrateEnabled,
+                    canStart = state.canStart,
+                    isLoading = state.isLoading,
+                    onHoursChange = { viewModel.onEvent(TimerEvent.SetHours(it)) },
+                    onMinutesChange = { viewModel.onEvent(TimerEvent.SetMinutes(it)) },
+                    onSecondsChange = { viewModel.onEvent(TimerEvent.SetSeconds(it)) },
+                    onLabelChange = { viewModel.onEvent(TimerEvent.SetLabel(it)) },
+                    onVibrateToggle = { viewModel.onEvent(TimerEvent.ToggleVibrate(it)) },
+                    onStart = {
+                        viewModel.onEvent(TimerEvent.StartTimer)
+                        onNavigateBack()
+                    }
+                )
             }
         }
     }

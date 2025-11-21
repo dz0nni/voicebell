@@ -64,6 +64,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun toggleAutoDeleteFinishedTimer() {
+        viewModelScope.launch {
+            val newValue = !_state.value.settings.autoDeleteFinishedTimer
+            settingsRepository.updateAutoDeleteFinishedTimer(newValue)
+        }
+    }
+
     private fun checkVoiceModelStatus() {
         _state.update {
             it.copy(isVoiceModelDownloaded = voskModelManager.isModelDownloaded())

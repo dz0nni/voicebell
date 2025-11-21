@@ -14,7 +14,8 @@ data class Settings(
     val defaultGradualVolumeEnabled: Boolean = true,
     val voiceCommandEnabled: Boolean = true,
     val maxRecentAlarms: Int = 3,
-    val maxRecentTimers: Int = 3
+    val maxRecentTimers: Int = 3,
+    val autoDeleteFinishedTimer: Boolean = false
 )
 
 /**

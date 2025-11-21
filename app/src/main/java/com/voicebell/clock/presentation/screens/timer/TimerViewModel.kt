@@ -12,6 +12,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -118,37 +120,41 @@ class TimerViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
-                startTimerUseCase(
-                    durationMillis = currentState.inputDurationMillis,
-                    label = currentState.inputLabel,
-                    vibrate = currentState.vibrateEnabled
-                ).onSuccess { timerId ->
-                    Log.d(TAG, "Timer started: $timerId")
+                // Use NonCancellable to ensure timer creation completes even if user locks screen
+                // This prevents JobCancellationException when Activity is destroyed during timer creation
+                withContext(NonCancellable) {
+                    startTimerUseCase(
+                        durationMillis = currentState.inputDurationMillis,
+                        label = currentState.inputLabel,
+                        vibrate = currentState.vibrateEnabled
+                    ).onSuccess { timerId ->
+                        Log.d(TAG, "Timer started: $timerId")
 
-                    // Start TimerService
-                    val intent = Intent(context, TimerService::class.java).apply {
-                        action = TimerService.ACTION_START
-                        putExtra(TimerService.EXTRA_TIMER_ID, timerId)
-                    }
-                    context.startForegroundService(intent)
+                        // Start TimerService
+                        val intent = Intent(context, TimerService::class.java).apply {
+                            action = TimerService.ACTION_START
+                            putExtra(TimerService.EXTRA_TIMER_ID, timerId)
+                        }
+                        context.startForegroundService(intent)
 
-                    // Reset input
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            inputHours = 0,
-                            inputMinutes = 0,
-                            inputSeconds = 0,
-                            inputLabel = ""
-                        )
-                    }
-                }.onFailure { error ->
-                    Log.e(TAG, "Error starting timer", error)
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Failed to start timer: ${error.message}"
-                        )
+                        // Reset input
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                inputHours = 0,
+                                inputMinutes = 0,
+                                inputSeconds = 0,
+                                inputLabel = ""
+                            )
+                        }
+                    }.onFailure { error ->
+                        Log.e(TAG, "Error starting timer", error)
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "Failed to start timer: ${error.message}"
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {

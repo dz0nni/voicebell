@@ -126,10 +126,29 @@ class AlarmService : Service() {
         // Mark alarm as active
         activeServiceManager.setAlarmActive(alarmId)
 
-        // Start foreground service with high-priority notification
-        // The notification's full-screen intent will handle launching the activity
+        // DUAL-LAUNCH STRATEGY for 100% reliability:
+        // Strategy 1: Full-screen intent notification (works via system UID on locked screens)
         val notification = createForegroundNotification(alarmId, isPreAlarm)
         startForeground(NotificationHelper.NOTIFICATION_ID_ALARM_SERVICE, notification)
+        Log.d(TAG, "Posted full-screen intent notification for alarm: $alarmId")
+
+        // Strategy 2: Direct Activity launch as fallback (handles unlocked screens + BAL edge cases)
+        // This ensures the Activity launches even if Android 14 BAL restrictions block notification intent
+        try {
+            val activityIntent = Intent(this, AlarmRingingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
+                        Intent.FLAG_ACTIVITY_NO_USER_ACTION
+                putExtra(EXTRA_ALARM_ID, alarmId)
+                putExtra(EXTRA_IS_PRE_ALARM, isPreAlarm)
+            }
+            startActivity(activityIntent)
+            Log.d(TAG, "Direct Activity launch successful for alarm: $alarmId")
+        } catch (e: Exception) {
+            // Direct launch may fail due to Android 14 BAL restrictions when service is in
+            // FOREGROUND_SERVICE state, but notification's fullScreenIntent will handle it
+            Log.w(TAG, "Direct Activity launch blocked (BAL restriction), relying on fullScreenIntent: ${e.message}")
+        }
 
         // Load alarm from database and start ringing
         serviceScope.launch {

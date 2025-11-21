@@ -1,6 +1,7 @@
 package com.voicebell.clock.domain.usecase.timer
 
 import com.voicebell.clock.domain.model.Timer
+import com.voicebell.clock.domain.repository.SettingsRepository
 import com.voicebell.clock.domain.repository.TimerRepository
 import javax.inject.Inject
 
@@ -8,7 +9,8 @@ import javax.inject.Inject
  * Use case for starting a new timer or resuming a paused one.
  */
 class StartTimerUseCase @Inject constructor(
-    private val timerRepository: TimerRepository
+    private val timerRepository: TimerRepository,
+    private val settingsRepository: SettingsRepository
 ) {
     /**
      * Start a new timer with given duration.
@@ -24,6 +26,12 @@ class StartTimerUseCase @Inject constructor(
         return try {
             if (durationMillis <= 0) {
                 return Result.failure(IllegalArgumentException("Duration must be positive"))
+            }
+
+            // Check if we should auto-delete finished timers
+            val settings = settingsRepository.getSettings()
+            if (settings.autoDeleteFinishedTimer) {
+                timerRepository.deleteFinishedTimers()
             }
 
             // Multiple timers are allowed to run simultaneously

@@ -4,6 +4,7 @@
 
     <!-- Alarm permissions -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
@@ -132,11 +133,21 @@
             android:name=".service.VoiceRecognitionService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="voice_commands" />
+        </service>
 
         <!-- Alarm Receiver (Broadcast Receiver) -->
         <receiver
             android:name=".receiver.AlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Timer Action Receiver (Handles timer notification actions) -->
+        <receiver
+            android:name=".receiver.TimerActionReceiver"
             android:enabled="true"
             android:exported="false" />
 

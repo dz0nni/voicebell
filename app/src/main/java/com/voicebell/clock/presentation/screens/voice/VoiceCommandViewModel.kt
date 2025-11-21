@@ -173,6 +173,10 @@ class VoiceCommandViewModel @Inject constructor(
                     }
                     addLog("💾 Starting timer...", LogType.PROCESSING)
                 }
+                is VoiceCommandResult.StopCommand -> {
+                    addLog("🛑 Detected: Stop command", LogType.INFO)
+                    addLog("⏹️ Stopping active timer...", LogType.PROCESSING)
+                }
                 is VoiceCommandResult.Unknown -> {
                     addLog("❓ Unknown command type", LogType.ERROR)
                 }

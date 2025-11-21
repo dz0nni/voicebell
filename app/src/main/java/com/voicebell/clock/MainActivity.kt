@@ -64,20 +64,9 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Active alarm/timer banner overlay
-                        ActiveServiceBanner(
-                            activeAlarmIdFlow = activeServiceManager.activeAlarmId,
-                            activeTimerIdFlow = activeServiceManager.activeTimerId,
-                            onDismissAlarm = {
-                                dismissAlarm()
-                            },
-                            onSnoozeAlarm = {
-                                snoozeAlarm()
-                            },
-                            onStopTimer = {
-                                stopTimer()
-                            }
-                        )
+                        // Removed in-app banner - full-screen intent always shown instead
+                        // ActiveServiceBanner removed to ensure AlarmRingingActivity/TimerFinishedActivity
+                        // are always shown via fullScreenIntent
                     }
                 }
             }
@@ -99,8 +88,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopTimer() {
+        val timerId = activeServiceManager.activeTimerId.value ?: return
         val intent = Intent(this, com.voicebell.clock.service.TimerService::class.java).apply {
             action = com.voicebell.clock.service.TimerService.ACTION_FINISH
+            putExtra(com.voicebell.clock.service.TimerService.EXTRA_TIMER_ID, timerId)
         }
         startService(intent)
     }

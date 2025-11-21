@@ -63,6 +63,8 @@ class VoiceRecognitionService : Service() {
     private var isRecording = false
     @Volatile
     private var isModelReady = false
+    @Volatile
+    private var listenForStopCommand = false
 
     companion object {
         private const val TAG = "VoiceRecognitionService"
@@ -79,12 +81,14 @@ class VoiceRecognitionService : Service() {
         const val ACTION_RESULT = "com.voicebell.clock.VOICE_RESULT"
         const val EXTRA_RESULT_TEXT = "result_text"
         const val EXTRA_RESULT_SUCCESS = "result_success"
+        const val EXTRA_LISTEN_FOR_STOP_COMMAND = "listen_for_stop_command"
 
         private const val MODEL_DIR_NAME = "vosk-model"
 
-        fun startListening(context: Context) {
+        fun startListening(context: Context, listenForStopCommand: Boolean = false) {
             val intent = Intent(context, VoiceRecognitionService::class.java).apply {
                 action = ACTION_START_LISTENING
+                putExtra(EXTRA_LISTEN_FOR_STOP_COMMAND, listenForStopCommand)
             }
             context.startService(intent)
         }
@@ -108,7 +112,8 @@ class VoiceRecognitionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_LISTENING -> {
-                Log.d(TAG, "Start listening action received")
+                listenForStopCommand = intent.getBooleanExtra(EXTRA_LISTEN_FOR_STOP_COMMAND, false)
+                Log.d(TAG, "Start listening action received (listenForStopCommand=$listenForStopCommand)")
                 startForeground(NOTIFICATION_ID, createNotification("Listening..."))
                 startRecording()
             }
@@ -297,9 +302,19 @@ class VoiceRecognitionService : Service() {
     private suspend fun processAudio(bufferSize: Int) {
         val buffer = ByteArray(bufferSize)
         var finalResultProcessed = false  // Track if final result was already processed
+        val startTime = System.currentTimeMillis()  // Track recording start time
+        val maxRecordingTimeMs = 10000L  // 10 seconds timeout
 
         while (coroutineContext.isActive && isRecording && isModelReady) {
             try {
+                // Check timeout (10 seconds)
+                val elapsedTime = System.currentTimeMillis() - startTime
+                if (elapsedTime >= maxRecordingTimeMs) {
+                    Log.d(TAG, "Recording timeout after ${elapsedTime}ms")
+                    stopRecording()
+                    break
+                }
+
                 // Check if still recording (may have stopped)
                 if (!isRecording || !isModelReady) break
 
@@ -317,13 +332,44 @@ class VoiceRecognitionService : Service() {
                         break
                     }
 
-                    // If final result available, process it
+                    // Process recognition results
                     if (result != null) {
-                        processFinalResult(result)
-                        finalResultProcessed = true  // Mark as processed
-                        // Stop after getting result (push-to-talk pattern)
-                        stopRecording()
-                        break
+                        val normalizedText = result.text.lowercase().trim()
+
+                        // Log partial results for debugging (but don't act on them)
+                        if (!result.isFinal) {
+                            Log.d(TAG, "Partial result: $normalizedText")
+                        }
+
+                        // ONLY check final results for "stop" command (ignore partial results)
+                        // This prevents false positives from alarm sound/background noise
+                        if (result.isFinal) {
+                            Log.d(TAG, "Final result received: $normalizedText")
+
+                            // Check if result is exactly "stop" or contains "stop" as a separate word
+                            // Use word boundary regex to avoid matching "stopwatch", "nonstop", etc.
+                            val containsStop = normalizedText == "stop" ||
+                                               Regex("\\bstop\\b").containsMatchIn(normalizedText)
+
+                            if (containsStop && listenForStopCommand) {
+                                Log.d(TAG, "STOP command detected in final result: ${result.text}")
+                                // Broadcast "stop" immediately
+                                broadcastResult("stop", true, null)
+                                finalResultProcessed = true
+                                stopRecording()
+                                break
+                            } else if (listenForStopCommand) {
+                                // Timer mode: Continue listening for STOP command (full 10 seconds)
+                                Log.d(TAG, "Final result without STOP (timer mode): ${result.text}, continuing to listen...")
+                            } else {
+                                // Normal mode: Stop immediately and broadcast result
+                                Log.d(TAG, "Final result received (normal mode): ${result.text}, stopping...")
+                                broadcastResult(result.text, true, null)
+                                finalResultProcessed = true
+                                stopRecording()
+                                break
+                            }
+                        }
                     }
                 } else if (readBytes < 0) {
                     Log.e(TAG, "Error reading audio: $readBytes")
@@ -396,6 +442,11 @@ class VoiceRecognitionService : Service() {
         }
         sendBroadcast(intent)
         Log.d(TAG, "Broadcast sent - action: $ACTION_RESULT, package: $packageName")
+
+        // Stop service after broadcasting result (both success and error)
+        // This ensures notification disappears and service doesn't stay running
+        stopSelf()
+        Log.d(TAG, "Service stopped after broadcasting result")
     }
 
     /**

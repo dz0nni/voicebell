@@ -35,7 +35,7 @@ import com.voicebell.clock.data.local.database.entities.WorldClockEntity
         StopwatchStateEntity::class,
         SettingsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(LapTimeListConverter::class)

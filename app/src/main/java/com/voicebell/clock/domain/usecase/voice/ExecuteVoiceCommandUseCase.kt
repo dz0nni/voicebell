@@ -16,6 +16,7 @@ import java.time.LocalTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Use case for executing parsed voice commands.
@@ -26,18 +27,30 @@ import javax.inject.Inject
  * - Query commands -> Return status
  * - Cancel commands -> Cancel alarm/timer
  *
+ * Singleton to prevent duplicate command execution when multiple
+ * screens are listening to voice recognition results.
+ *
  * Based on the original architecture plan.
  */
+@Singleton
 class ExecuteVoiceCommandUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
     private val voiceCommandParser: VoiceCommandParser,
     private val createAlarmUseCase: CreateAlarmUseCase,
-    private val startTimerUseCase: StartTimerUseCase
+    private val startTimerUseCase: StartTimerUseCase,
+    private val activeServiceManager: com.voicebell.clock.util.ActiveServiceManager
 ) {
 
     companion object {
         private const val TAG = "ExecuteVoiceCommand"
+        private const val DUPLICATE_WINDOW_MS = 1000L // 1 second window
     }
+
+    // Track last processed command to avoid duplicates from multiple receivers
+    @Volatile
+    private var lastProcessedText: String? = null
+    @Volatile
+    private var lastProcessedTime: Long = 0
 
     /**
      * Execute a voice command from recognized text.
@@ -46,6 +59,18 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
      * @return Result of command execution
      */
     suspend operator fun invoke(recognizedText: String): CommandExecutionResult {
+        // Check for duplicate command within 1 second window
+        val currentTime = System.currentTimeMillis()
+        if (recognizedText == lastProcessedText &&
+            (currentTime - lastProcessedTime) < DUPLICATE_WINDOW_MS) {
+            Log.d(TAG, "Skipping duplicate command: $recognizedText")
+            return CommandExecutionResult.Error("Duplicate command ignored")
+        }
+
+        // Update duplicate detection
+        lastProcessedText = recognizedText
+        lastProcessedTime = currentTime
+
         Log.d(TAG, "Executing voice command: $recognizedText")
 
         // Normalize recognized text (fix common recognition errors)
@@ -61,6 +86,7 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
         return when (parseResult) {
             is VoiceCommandResult.AlarmCommand -> executeAlarmCommand(parseResult)
             is VoiceCommandResult.TimerCommand -> executeTimerCommand(parseResult)
+            is VoiceCommandResult.StopCommand -> executeStopCommand()
             is VoiceCommandResult.Unknown -> {
                 Log.w(TAG, "Unknown command: ${parseResult.originalText}")
                 CommandExecutionResult.Error("I didn't understand that command")
@@ -127,6 +153,34 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
         }
 
         return time
+    }
+
+    /**
+     * Execute stop command - dismiss active timer/alarm.
+     */
+    private suspend fun executeStopCommand(): CommandExecutionResult {
+        return try {
+            // Check if there's an active timer
+            val activeTimerId = activeServiceManager.activeTimerId.value
+            if (activeTimerId != null) {
+                Log.d(TAG, "Stopping active timer: $activeTimerId")
+
+                // Send ACTION_FINISH to TimerService
+                val intent = Intent(context, TimerService::class.java).apply {
+                    action = TimerService.ACTION_FINISH
+                    putExtra(TimerService.EXTRA_TIMER_ID, activeTimerId)
+                }
+                context.startService(intent)
+
+                CommandExecutionResult.Success("Timer stopped")
+            } else {
+                Log.w(TAG, "No active timer to stop")
+                CommandExecutionResult.Error("No active timer")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping timer", e)
+            CommandExecutionResult.Error("Failed to stop timer")
+        }
     }
 
     /**
@@ -273,6 +327,7 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
      * - "won" → "one" (e.g., "alarm won thirty" → "alarm one thirty" → 01:30)
      * - "ate" → "eight" (e.g., "alarm ate thirty" → "alarm eight thirty" → 08:30)
      * - "said" → "set" (e.g., "said alarm" → "set alarm")
+     * - "too" → "two" (e.g., "alarm too thirty" → "alarm two thirty" → 02:30)
      */
     private fun normalizeRecognizedText(text: String): String {
         var normalized = text
@@ -282,6 +337,7 @@ class ExecuteVoiceCommandUseCase @Inject constructor(
         normalized = normalized.replace(Regex("\\bwon\\b", RegexOption.IGNORE_CASE), "one")
         normalized = normalized.replace(Regex("\\bate\\b", RegexOption.IGNORE_CASE), "eight")
         normalized = normalized.replace(Regex("\\bsaid\\b", RegexOption.IGNORE_CASE), "set")
+        normalized = normalized.replace(Regex("\\btoo\\b", RegexOption.IGNORE_CASE), "two")
 
         return normalized
     }

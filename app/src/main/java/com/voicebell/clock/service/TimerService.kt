@@ -56,9 +56,8 @@ class TimerService : Service() {
     lateinit var activeServiceManager: com.voicebell.clock.util.ActiveServiceManager
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
-    private var updateJob: Job? = null
-    private var currentTimerId: Long = -1
-    private var mediaPlayer: MediaPlayer? = null
+    private val updateJobs = mutableMapOf<Long, Job>()  // Track multiple timer jobs
+    private val mediaPlayers = mutableMapOf<Long, MediaPlayer>()  // Track multiple alarms
     private var vibrator: Vibrator? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -77,16 +76,28 @@ class TimerService : Service() {
                 }
             }
             ACTION_PAUSE -> {
-                pauseTimer()
+                val timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1)
+                if (timerId != -1L) {
+                    pauseTimer(timerId)
+                }
             }
             ACTION_RESUME -> {
-                resumeTimer()
+                val timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1)
+                if (timerId != -1L) {
+                    resumeTimer(timerId)
+                }
             }
             ACTION_STOP -> {
-                stopTimer()
+                val timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1)
+                if (timerId != -1L) {
+                    stopTimer(timerId)
+                }
             }
             ACTION_FINISH -> {
-                finishTimer()
+                val timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1)
+                if (timerId != -1L) {
+                    finishTimer(timerId)
+                }
             }
         }
 
@@ -95,25 +106,30 @@ class TimerService : Service() {
 
     private fun startTimer(timerId: Long) {
         Log.d(TAG, "Starting timer: $timerId")
-        currentTimerId = timerId
 
-        // Start foreground service
-        val notification = createNotification(0, 0, false)
-        startForeground(NotificationHelper.NOTIFICATION_ID_TIMER_SERVICE, notification)
+        // Start foreground service with first timer
+        if (updateJobs.isEmpty()) {
+            val notification = createNotification(timerId, 0, 0, false)
+            startForeground(NotificationHelper.NOTIFICATION_ID_TIMER_SERVICE, notification)
+        }
 
-        // Start countdown updates
-        startCountdown()
+        // Start countdown updates for this specific timer
+        startCountdown(timerId)
     }
 
-    private fun startCountdown() {
-        updateJob?.cancel()
-        updateJob = serviceScope.launch {
+    private fun startCountdown(timerId: Long) {
+        // Cancel existing job for this timer if any
+        updateJobs[timerId]?.cancel()
+
+        // Create new countdown job for this timer
+        updateJobs[timerId] = serviceScope.launch {
             while (isActive) {
                 try {
-                    val timer = timerRepository.getTimerById(currentTimerId)
+                    val timer = timerRepository.getTimerById(timerId)
                     if (timer == null) {
-                        Log.w(TAG, "Timer not found: $currentTimerId")
-                        stopSelf()
+                        Log.w(TAG, "Timer not found: $timerId")
+                        updateJobs.remove(timerId)
+                        stopSelfIfNoActiveTimers()
                         break
                     }
 
@@ -126,39 +142,45 @@ class TimerService : Service() {
 
                     if (remaining <= 0) {
                         // Timer finished!
-                        handleTimerFinished(timer.vibrate)
+                        handleTimerFinished(timerId, timer.vibrate)
                         break
                     }
 
-                    // Update notification
-                    val notification = createNotification(
-                        remaining,
-                        timer.durationMillis,
-                        timer.isPaused
-                    )
-                    notificationHelper.notificationManager.notify(
-                        NotificationHelper.NOTIFICATION_ID_TIMER_SERVICE,
-                        notification
-                    )
+                    // Update notification (show first active timer)
+                    if (updateJobs.keys.firstOrNull() == timerId) {
+                        val notification = createNotification(
+                            timerId,
+                            remaining,
+                            timer.durationMillis,
+                            timer.isPaused
+                        )
+                        notificationHelper.notificationManager.notify(
+                            NotificationHelper.NOTIFICATION_ID_TIMER_SERVICE,
+                            notification
+                        )
+                    }
 
                     delay(UPDATE_INTERVAL_MS)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error updating timer", e)
+                    Log.e(TAG, "Error updating timer $timerId", e)
+                    updateJobs.remove(timerId)
                     break
                 }
             }
         }
     }
 
-    private fun pauseTimer() {
-        Log.d(TAG, "Pausing timer")
-        updateJob?.cancel()
+    private fun pauseTimer(timerId: Long) {
+        Log.d(TAG, "Pausing timer: $timerId")
+        updateJobs[timerId]?.cancel()
+        updateJobs.remove(timerId)
 
         // Update notification to show paused state
         serviceScope.launch {
-            val timer = timerRepository.getTimerById(currentTimerId)
+            val timer = timerRepository.getTimerById(timerId)
             if (timer != null) {
                 val notification = createNotification(
+                    timerId,
                     timer.remainingMillis,
                     timer.durationMillis,
                     true
@@ -171,74 +193,104 @@ class TimerService : Service() {
         }
     }
 
-    private fun resumeTimer() {
-        Log.d(TAG, "Resuming timer")
-        startCountdown()
+    private fun resumeTimer(timerId: Long) {
+        Log.d(TAG, "Resuming timer: $timerId")
+        startCountdown(timerId)
     }
 
-    private fun stopTimer() {
-        Log.d(TAG, "Stopping timer")
-        updateJob?.cancel()
-        stopSelf()
+    private fun stopTimer(timerId: Long) {
+        Log.d(TAG, "Stopping timer: $timerId")
+        updateJobs[timerId]?.cancel()
+        updateJobs.remove(timerId)
+        stopSelfIfNoActiveTimers()
     }
 
-    private fun handleTimerFinished(vibrate: Boolean) {
-        Log.d(TAG, "Timer finished!")
+    private fun handleTimerFinished(timerId: Long, vibrate: Boolean) {
+        Log.d(TAG, "Timer finished: $timerId")
 
         // Mark timer as active (ringing)
-        activeServiceManager.setTimerActive(currentTimerId)
+        activeServiceManager.setTimerActive(timerId)
 
         serviceScope.launch {
             try {
                 // Mark timer as finished in database
-                timerRepository.markAsFinished(currentTimerId)
+                timerRepository.markAsFinished(timerId)
 
-                // Play alarm sound
-                playAlarmSound()
+                // Play alarm sound for this specific timer
+                playAlarmSound(timerId)
 
                 // Vibrate if enabled
                 if (vibrate) {
                     startVibration()
                 }
 
-                // Show finished notification
-                // The notification's full-screen intent will handle launching the activity
-                val notification = createFinishedNotification()
+                // DUAL-LAUNCH STRATEGY for 100% reliability:
+                // Strategy 1: Full-screen intent notification (works via system UID on locked screens)
+                val notification = createFinishedNotification(timerId)
                 notificationHelper.notificationManager.notify(
-                    NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED,
+                    NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt(),
                     notification
                 )
+                Log.d(TAG, "Posted full-screen intent notification for timer: $timerId")
 
-                // Stop countdown but keep service running for alarm
-                updateJob?.cancel()
+                // Strategy 2: Direct Activity launch as fallback (handles unlocked screens + BAL edge cases)
+                // This ensures the Activity launches even if Android 14 BAL restrictions block notification intent
+                try {
+                    val activityIntent = Intent(applicationContext, com.voicebell.clock.presentation.screens.timer.TimerFinishedActivity::class.java).apply {
+                        putExtra(EXTRA_TIMER_ID, timerId)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    applicationContext.startActivity(activityIntent)
+                    Log.d(TAG, "Direct Activity launch successful for timer: $timerId")
+                } catch (e: Exception) {
+                    // Direct launch may fail due to Android 14 BAL restrictions when service is in
+                    // FOREGROUND_SERVICE state, but notification's fullScreenIntent will handle it
+                    Log.w(TAG, "Direct Activity launch blocked (BAL restriction), relying on fullScreenIntent: ${e.message}")
+                }
+
+                // TimerFinishedActivity will handle voice recognition in its onCreate()
+
+                // Remove from active jobs
+                updateJobs.remove(timerId)
 
                 // Auto-stop alarm after 60 seconds
                 delay(60000)
-                stopAlarm()
-                stopSelf()
+                Log.d(TAG, "Auto-stopping timer alarm: $timerId")
+                stopAlarm(timerId)
+                // Dismiss notification
+                notificationHelper.notificationManager.cancel(
+                    NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
+                )
+                activeServiceManager.clearActiveTimer()
+                stopSelfIfNoActiveTimers()
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling timer finish", e)
-                stopSelf()
+                stopSelfIfNoActiveTimers()
             }
         }
     }
 
-    private fun finishTimer() {
-        Log.d(TAG, "Finishing timer (user dismissed)")
+    private fun finishTimer(timerId: Long) {
+        Log.d(TAG, "Finishing timer (user dismissed): $timerId")
 
         // Clear active timer
         activeServiceManager.clearActiveTimer()
 
-        stopAlarm()
-        stopSelf()
+        // Stop alarm and dismiss notification
+        stopAlarm(timerId)
+        notificationHelper.notificationManager.cancel(
+            NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
+        )
+
+        stopSelfIfNoActiveTimers()
     }
 
-    private fun playAlarmSound() {
+    private fun playAlarmSound(timerId: Long) {
         try {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-            mediaPlayer = MediaPlayer().apply {
+            mediaPlayers[timerId] = MediaPlayer().apply {
                 setDataSource(applicationContext, alarmUri)
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -251,7 +303,7 @@ class TimerService : Service() {
                 start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing alarm sound", e)
+            Log.e(TAG, "Error playing alarm sound for timer $timerId", e)
         }
     }
 
@@ -272,36 +324,35 @@ class TimerService : Service() {
         }
     }
 
-    private fun stopAlarm() {
-        mediaPlayer?.let {
+    private fun stopAlarm(timerId: Long) {
+        mediaPlayers[timerId]?.let {
             try {
                 if (it.isPlaying) {
                     it.stop()
                 }
                 it.release()
             } catch (e: Exception) {
-                Log.e(TAG, "Error stopping media player", e)
+                Log.e(TAG, "Error stopping media player for timer $timerId", e)
             }
         }
-        mediaPlayer = null
-        vibrator?.cancel()
+        mediaPlayers.remove(timerId)
+
+        // Only stop vibration if no other alarms are playing
+        if (mediaPlayers.isEmpty()) {
+            vibrator?.cancel()
+        }
     }
 
-    private fun launchFinishedActivity() {
-        val intent = Intent(this, TimerFinishedActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-            putExtra(EXTRA_TIMER_ID, currentTimerId)
-        }
-
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error launching finished activity", e)
+    private fun stopSelfIfNoActiveTimers() {
+        // Only stop service if no timers are running and no alarms are playing
+        if (updateJobs.isEmpty() && mediaPlayers.isEmpty()) {
+            Log.d(TAG, "No active timers, stopping service")
+            stopSelf()
         }
     }
 
     private fun createNotification(
+        timerId: Long,
         remainingMillis: Long,
         totalMillis: Long,
         isPaused: Boolean
@@ -317,10 +368,11 @@ class TimerService : Service() {
         val pauseResumeAction = if (isPaused) {
             val resumeIntent = Intent(this, TimerService::class.java).apply {
                 action = ACTION_RESUME
+                putExtra(EXTRA_TIMER_ID, timerId)
             }
             val resumePendingIntent = PendingIntent.getService(
                 this,
-                1,
+                timerId.toInt() * 10 + 1,
                 resumeIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -332,10 +384,11 @@ class TimerService : Service() {
         } else {
             val pauseIntent = Intent(this, TimerService::class.java).apply {
                 action = ACTION_PAUSE
+                putExtra(EXTRA_TIMER_ID, timerId)
             }
             val pausePendingIntent = PendingIntent.getService(
                 this,
-                1,
+                timerId.toInt() * 10 + 1,
                 pauseIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -349,10 +402,11 @@ class TimerService : Service() {
         // Stop action
         val stopIntent = Intent(this, TimerService::class.java).apply {
             action = ACTION_STOP
+            putExtra(EXTRA_TIMER_ID, timerId)
         }
         val stopPendingIntent = PendingIntent.getService(
             this,
-            2,
+            timerId.toInt() * 10 + 2,
             stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -384,23 +438,25 @@ class TimerService : Service() {
             .build()
     }
 
-    private fun createFinishedNotification(): Notification {
-        val finishIntent = Intent(this, TimerService::class.java).apply {
-            action = ACTION_FINISH
+    private fun createFinishedNotification(timerId: Long): Notification {
+        // Full-screen intent opens TimerFinishedActivity (enables voice recognition)
+        val activityIntent = Intent(this, com.voicebell.clock.presentation.screens.timer.TimerFinishedActivity::class.java).apply {
+            putExtra(EXTRA_TIMER_ID, timerId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val finishPendingIntent = PendingIntent.getService(
+        val activityPendingIntent = PendingIntent.getActivity(
             this,
-            3,
-            finishIntent,
+            timerId.toInt(), // Unique request code per timer
+            activityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID_TIMER_FINISHED)
             .setContentTitle("Timer Finished!")
-            .setContentText("Tap to stop alarm")
+            .setContentText("Say 'STOP' or tap to dismiss")
             .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Add proper icon
-            .setContentIntent(finishPendingIntent)
-            .setFullScreenIntent(finishPendingIntent, true) // Enable full-screen intent for locked screen
+            .setContentIntent(activityPendingIntent)
+            .setFullScreenIntent(activityPendingIntent, true)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -431,10 +487,19 @@ class TimerService : Service() {
         }
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
-        updateJob?.cancel()
-        stopAlarm()
+
+        // Cancel all countdown jobs
+        updateJobs.values.forEach { it.cancel() }
+        updateJobs.clear()
+
+        // Stop all alarms
+        mediaPlayers.keys.toList().forEach { timerId ->
+            stopAlarm(timerId)
+        }
+
         serviceScope.cancel()
     }
 }

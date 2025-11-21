@@ -119,6 +119,9 @@ fun NavGraph(
             TimerScreen(
                 onNavigateToSettings = {
                     navController.navigate(Routes.Settings.route)
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

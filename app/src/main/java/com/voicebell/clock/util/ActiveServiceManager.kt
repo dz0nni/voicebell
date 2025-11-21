@@ -3,8 +3,8 @@ package com.voicebell.clock.util
 import android.content.Context
 import android.content.SharedPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,10 +26,10 @@ class ActiveServiceManager @Inject constructor(
     )
 
     private val _activeAlarmId = MutableStateFlow<Long?>(null)
-    val activeAlarmId: Flow<Long?> = _activeAlarmId.asStateFlow()
+    val activeAlarmId: StateFlow<Long?> = _activeAlarmId.asStateFlow()
 
     private val _activeTimerId = MutableStateFlow<Long?>(null)
-    val activeTimerId: Flow<Long?> = _activeTimerId.asStateFlow()
+    val activeTimerId: StateFlow<Long?> = _activeTimerId.asStateFlow()
 
     init {
         // Load initial state
