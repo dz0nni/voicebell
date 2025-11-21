@@ -114,8 +114,15 @@ class VoiceRecognitionService : Service() {
             ACTION_START_LISTENING -> {
                 listenForStopCommand = intent.getBooleanExtra(EXTRA_LISTEN_FOR_STOP_COMMAND, false)
                 Log.d(TAG, "Start listening action received (listenForStopCommand=$listenForStopCommand)")
-                startForeground(NOTIFICATION_ID, createNotification("Listening..."))
-                startRecording()
+                try {
+                    startForeground(NOTIFICATION_ID, createNotification("Listening..."))
+                    startRecording()
+                } catch (e: SecurityException) {
+                    // Android 14+ may block foreground service with microphone type from background
+                    Log.e(TAG, "Failed to start foreground service (microphone permission issue): ${e.message}")
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
             }
             ACTION_STOP_LISTENING -> {
                 Log.d(TAG, "Stop listening action received")

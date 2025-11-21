@@ -6,7 +6,10 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaPlayer
+import android.media.MediaRecorder
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
@@ -20,8 +23,10 @@ import com.voicebell.clock.R
 import com.voicebell.clock.domain.repository.TimerRepository
 import com.voicebell.clock.presentation.screens.timer.TimerFinishedActivity
 import com.voicebell.clock.util.NotificationHelper
+import com.voicebell.clock.vosk.VoskWrapper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import org.json.JSONObject
 import javax.inject.Inject
 
 /**
@@ -39,12 +44,18 @@ class TimerService : Service() {
         const val ACTION_RESUME = "com.voicebell.clock.timer.RESUME"
         const val ACTION_STOP = "com.voicebell.clock.timer.STOP"
         const val ACTION_FINISH = "com.voicebell.clock.timer.FINISH"
+        const val ACTION_TIMER_DISMISSED = "com.voicebell.clock.timer.DISMISSED"
 
         const val EXTRA_TIMER_ID = "timer_id"
         const val EXTRA_DURATION_MILLIS = "duration_millis"
         const val EXTRA_LABEL = "label"
 
         private const val UPDATE_INTERVAL_MS = 1000L // Update every second
+
+        // Voice recognition config
+        private const val VOICE_SAMPLE_RATE = 16000
+        private val VOICE_CHANNEL = AudioFormat.CHANNEL_IN_MONO
+        private val VOICE_ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
 
     @Inject
@@ -56,10 +67,21 @@ class TimerService : Service() {
     @Inject
     lateinit var activeServiceManager: com.voicebell.clock.util.ActiveServiceManager
 
+    @Inject
+    lateinit var voskWrapper: VoskWrapper
+
+    @Inject
+    lateinit var voskModelManager: com.voicebell.clock.util.VoskModelManager
+
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private val updateJobs = mutableMapOf<Long, Job>()  // Track multiple timer jobs
     private val mediaPlayers = mutableMapOf<Long, MediaPlayer>()  // Track multiple alarms
     private var vibrator: Vibrator? = null
+
+    // Voice recognition
+    private var audioRecord: AudioRecord? = null
+    private var voiceRecognitionJob: Job? = null
+    @Volatile private var isListeningForStop = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -225,14 +247,8 @@ class TimerService : Service() {
                     startVibration()
                 }
 
-                // Start voice recognition service to listen for "stop" command
-                // This works regardless of whether full-screen activity or heads-up notification is shown
-                try {
-                    VoiceRecognitionService.startListening(applicationContext, listenForStopCommand = true)
-                    Log.d(TAG, "Started VoiceRecognitionService to listen for STOP command")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to start VoiceRecognitionService: ${e.message}")
-                }
+                // Start voice recognition directly in TimerService (avoids Android 14+ FGS restrictions)
+                startVoiceRecognitionForStop(timerId)
 
                 // Post notification with Dismiss button (for both lock screen and heads-up)
                 val notification = createFinishedNotification(timerId)
@@ -286,12 +302,16 @@ class TimerService : Service() {
             NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + actualTimerId.toInt()
         )
 
-        // Stop voice recognition service if running
-        try {
-            VoiceRecognitionService.stopListening(applicationContext)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to stop VoiceRecognitionService", e)
+        // Stop voice recognition
+        stopVoiceRecognition()
+
+        // Broadcast that timer was dismissed (so TimerFinishedActivity can close)
+        val dismissedIntent = Intent(ACTION_TIMER_DISMISSED).apply {
+            setPackage(packageName)
+            putExtra(EXTRA_TIMER_ID, actualTimerId)
         }
+        sendBroadcast(dismissedIntent)
+        Log.d(TAG, "Sent timer dismissed broadcast for timer: $actualTimerId")
 
         stopSelfIfNoActiveTimers()
     }
@@ -511,9 +531,134 @@ class TimerService : Service() {
         }
     }
 
+    /**
+     * Start voice recognition to listen for "stop" command.
+     * This runs directly in TimerService to avoid Android 14+ FGS restrictions.
+     */
+    private fun startVoiceRecognitionForStop(timerId: Long) {
+        // Check permission first
+        val hasPermission = android.content.pm.PackageManager.PERMISSION_GRANTED ==
+            applicationContext.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+        if (!hasPermission) {
+            Log.w(TAG, "RECORD_AUDIO permission not granted, skipping voice recognition")
+            return
+        }
+
+        Log.d(TAG, "Starting voice recognition for STOP command (timer: $timerId)")
+        isListeningForStop = true
+
+        voiceRecognitionJob = serviceScope.launch(Dispatchers.IO) {
+            try {
+                // Initialize Vosk model if needed
+                if (!voskModelManager.isModelDownloaded()) {
+                    Log.w(TAG, "Vosk model not downloaded, skipping voice recognition")
+                    return@launch
+                }
+
+                val modelPath = voskModelManager.getModelPath()
+                if (!voskWrapper.initModel(modelPath)) {
+                    Log.e(TAG, "Failed to initialize Vosk model")
+                    return@launch
+                }
+                Log.d(TAG, "Vosk model initialized")
+
+                // Start audio recording
+                val bufferSize = AudioRecord.getMinBufferSize(VOICE_SAMPLE_RATE, VOICE_CHANNEL, VOICE_ENCODING)
+                if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
+                    Log.e(TAG, "Invalid buffer size: $bufferSize")
+                    return@launch
+                }
+
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                    VOICE_SAMPLE_RATE,
+                    VOICE_CHANNEL,
+                    VOICE_ENCODING,
+                    bufferSize
+                )
+
+                if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                    Log.e(TAG, "AudioRecord not initialized")
+                    return@launch
+                }
+
+                audioRecord?.startRecording()
+                Log.d(TAG, "Audio recording started for STOP detection")
+
+                voskWrapper.reset()
+                val buffer = ByteArray(bufferSize)
+                val startTime = System.currentTimeMillis()
+                val maxListenTimeMs = 15000L // Listen for 15 seconds max
+
+                while (isActive && isListeningForStop) {
+                    // Check timeout
+                    if (System.currentTimeMillis() - startTime > maxListenTimeMs) {
+                        Log.d(TAG, "Voice recognition timeout")
+                        break
+                    }
+
+                    val readBytes = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                    if (readBytes > 0 && isListeningForStop) {
+                        val result = try {
+                            voskWrapper.acceptAudioChunk(buffer)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Vosk error: ${e.message}")
+                            break
+                        }
+
+                        if (result != null) {
+                            val text = result.text.lowercase().trim()
+                            if (result.isFinal) {
+                                Log.d(TAG, "Final result: $text")
+                                if (text == "stop" || Regex("\\bstop\\b").containsMatchIn(text)) {
+                                    Log.d(TAG, "STOP command detected! Finishing timer.")
+                                    withContext(Dispatchers.Main) {
+                                        finishTimer(timerId)
+                                    }
+                                    break
+                                }
+                            } else if (text.isNotEmpty()) {
+                                Log.v(TAG, "Partial: $text")
+                            }
+                        }
+                    }
+                }
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Security exception in voice recognition: ${e.message}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in voice recognition: ${e.message}")
+            } finally {
+                stopVoiceRecognition()
+            }
+        }
+    }
+
+    private fun stopVoiceRecognition() {
+        isListeningForStop = false
+        voiceRecognitionJob?.cancel()
+        voiceRecognitionJob = null
+
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping audio record: ${e.message}")
+        }
+        audioRecord = null
+
+        try {
+            voskWrapper.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error releasing Vosk: ${e.message}")
+        }
+        Log.d(TAG, "Voice recognition stopped")
+    }
 
     override fun onDestroy() {
         super.onDestroy()
+
+        // Stop voice recognition
+        stopVoiceRecognition()
 
         // Cancel all countdown jobs
         updateJobs.values.forEach { it.cancel() }

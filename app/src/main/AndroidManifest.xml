@@ -122,7 +122,7 @@
             android:name=".service.TimerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="microphone|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="timer" />
@@ -133,11 +133,7 @@
             android:name=".service.VoiceRecognitionService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="voice_commands" />
-        </service>
+            android:foregroundServiceType="microphone" />
 
         <!-- Alarm Receiver (Broadcast Receiver) -->
         <receiver

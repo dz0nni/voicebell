@@ -1,5 +1,6 @@
 package com.voicebell.clock.presentation.screens.timer
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -20,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.voicebell.clock.presentation.theme.VoiceBellTheme
 import com.voicebell.clock.service.TimerService
-import com.voicebell.clock.service.VoiceRecognitionService
+import com.voicebell.clock.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -32,8 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class TimerFinishedActivity : ComponentActivity() {
 
     private var timerId: Long = -1
-    private var voiceResultReceiver: BroadcastReceiver? = null
-    private var isReceiverRegistered = false
+    private var dismissedReceiver: BroadcastReceiver? = null
 
     companion object {
         private const val TAG = "TimerFinishedActivity"
@@ -57,13 +57,13 @@ class TimerFinishedActivity : ComponentActivity() {
 
         // Get timer ID from intent
         timerId = intent.getLongExtra(TimerService.EXTRA_TIMER_ID, -1)
+        Log.d(TAG, "TimerFinishedActivity created for timer $timerId")
 
-        // Register receiver to listen for voice recognition results
-        registerVoiceResultReceiver()
+        // Register receiver to listen for timer dismissed broadcast (from voice command)
+        registerDismissedReceiver()
 
-        // Start voice recognition (activity is foreground → microphone works!)
-        Log.d(TAG, "Starting voice recognition for timer $timerId")
-        VoiceRecognitionService.startListening(this, listenForStopCommand = true)
+        // Note: Voice recognition is handled by TimerService directly
+        // We don't start VoiceRecognitionService here to avoid conflicts
 
         setContent {
             VoiceBellTheme {
@@ -74,55 +74,54 @@ class TimerFinishedActivity : ComponentActivity() {
         }
     }
 
-    private fun registerVoiceResultReceiver() {
-        voiceResultReceiver = object : BroadcastReceiver() {
+    private fun registerDismissedReceiver() {
+        dismissedReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == VoiceRecognitionService.ACTION_RESULT) {
-                    val text = intent.getStringExtra(VoiceRecognitionService.EXTRA_RESULT_TEXT) ?: ""
-                    val success = intent.getBooleanExtra(VoiceRecognitionService.EXTRA_RESULT_SUCCESS, false)
-
-                    Log.d(TAG, "Voice result received - text: $text, success: $success")
-
-                    if (success && text.lowercase().contains("stop")) {
-                        Log.d(TAG, "STOP command detected, dismissing timer")
-                        dismissTimer()
+                if (intent?.action == TimerService.ACTION_TIMER_DISMISSED) {
+                    val dismissedTimerId = intent.getLongExtra(TimerService.EXTRA_TIMER_ID, -1)
+                    Log.d(TAG, "Received timer dismissed broadcast for timer: $dismissedTimerId")
+                    if (dismissedTimerId == timerId || dismissedTimerId == -1L) {
+                        Log.d(TAG, "Closing activity due to voice dismiss")
+                        finish()
                     }
                 }
             }
         }
 
-        val filter = IntentFilter(VoiceRecognitionService.ACTION_RESULT)
+        val filter = IntentFilter(TimerService.ACTION_TIMER_DISMISSED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(voiceResultReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(dismissedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(voiceResultReceiver, filter)
+            registerReceiver(dismissedReceiver, filter)
         }
-        isReceiverRegistered = true
-
-        Log.d(TAG, "Voice result receiver registered")
+        Log.d(TAG, "Registered dismissed receiver")
     }
 
-    private fun unregisterVoiceResultReceiver() {
-        if (isReceiverRegistered && voiceResultReceiver != null) {
+    private fun unregisterDismissedReceiver() {
+        dismissedReceiver?.let {
             try {
-                unregisterReceiver(voiceResultReceiver)
-                isReceiverRegistered = false
-                voiceResultReceiver = null
-                Log.d(TAG, "Voice result receiver unregistered")
+                unregisterReceiver(it)
+                Log.d(TAG, "Unregistered dismissed receiver")
             } catch (e: Exception) {
-                Log.e(TAG, "Error unregistering receiver", e)
+                Log.w(TAG, "Error unregistering receiver", e)
             }
         }
+        dismissedReceiver = null
     }
 
     private fun dismissTimer() {
-        // Unregister receiver
-        unregisterVoiceResultReceiver()
+        Log.d(TAG, "Dismissing timer: $timerId")
 
-        // Stop voice recognition
-        VoiceRecognitionService.stopListening(this)
+        // Unregister receiver first
+        unregisterDismissedReceiver()
 
-        // Stop the alarm service
+        // Cancel the notification directly
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationId = NotificationHelper.NOTIFICATION_ID_TIMER_FINISHED + timerId.toInt()
+        notificationManager.cancel(notificationId)
+        Log.d(TAG, "Cancelled notification: $notificationId")
+
+        // Stop the alarm via TimerService (this also stops voice recognition)
         val intent = Intent(this, TimerService::class.java).apply {
             action = TimerService.ACTION_FINISH
             putExtra(TimerService.EXTRA_TIMER_ID, timerId)
@@ -134,8 +133,7 @@ class TimerFinishedActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterVoiceResultReceiver()
-        VoiceRecognitionService.stopListening(this)
+        unregisterDismissedReceiver()
     }
 
     override fun onBackPressed() {
