@@ -80,12 +80,29 @@ class TimerAudioPlayer(private val context: Context) {
 
             // Create new MediaPlayer
             mediaPlayer = MediaPlayer().apply {
+                // Use USAGE_MEDIA to respect audio routing (not USAGE_ALARM which forces all outputs)
                 setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build()
                 )
+
+                // Find and set Bluetooth audio device as preferred output
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                    val bluetoothDevice = audioDevices.firstOrNull { device ->
+                        device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                    }
+
+                    bluetoothDevice?.let { device ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            setPreferredDevice(device)
+                            Log.d(TAG, "Set preferred audio device to Bluetooth: ${device.productName}")
+                        }
+                    } ?: Log.w(TAG, "No Bluetooth audio device found for routing")
+                }
 
                 // Set data source from resources
                 val afd = context.resources.openRawResourceFd(resourceId)

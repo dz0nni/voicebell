@@ -43,30 +43,23 @@ class BluetoothHeadsetDetector(private val context: Context) {
         }
 
         return try {
-            // Method 1: Check via AudioManager (most reliable)
+            // Check via AudioManager - only returns true if audio is actively routed to Bluetooth
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val isBluetoothA2dpOn = audioManager.isBluetoothA2dpOn
-            val isBluetoothScoOn = audioManager.isBluetoothScoOn
 
-            if (isBluetoothA2dpOn || isBluetoothScoOn) {
-                Log.d(TAG, "Bluetooth audio detected via AudioManager (A2DP: $isBluetoothA2dpOn, SCO: $isBluetoothScoOn)")
-                return true
+            // Check if any Bluetooth audio device is connected
+            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val hasBluetoothAudio = audioDevices.any { device ->
+                device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
             }
 
-            // Method 2: Check via BluetoothAdapter (fallback)
-            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-            if (bluetoothAdapter != null && bluetoothAdapter.isEnabled) {
-                val connectedDevices = bluetoothAdapter.bondedDevices
-                for (device in connectedDevices) {
-                    if (isAudioDevice(device)) {
-                        Log.d(TAG, "Bluetooth audio device found: ${device.name}")
-                        return true
-                    }
-                }
+            if (hasBluetoothAudio) {
+                Log.d(TAG, "Bluetooth audio device actively connected")
+                true
+            } else {
+                Log.d(TAG, "No active Bluetooth audio connection")
+                false
             }
-
-            Log.d(TAG, "No Bluetooth headset detected")
-            false
         } catch (e: SecurityException) {
             Log.e(TAG, "Security exception checking Bluetooth: ${e.message}")
             false
