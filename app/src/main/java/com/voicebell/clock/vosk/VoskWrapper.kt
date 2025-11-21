@@ -23,6 +23,9 @@ class VoskWrapper @Inject constructor() {
     private var recognizer: Recognizer? = null
     private var lastPartialText: String = ""
 
+    @Volatile
+    private var isReleasing = false  // Prevent concurrent release/reset calls
+
     companion object {
         private const val TAG = "VoskWrapper"
         private const val SAMPLE_RATE = 16000.0f
@@ -56,11 +59,19 @@ class VoskWrapper @Inject constructor() {
 
     /**
      * Process audio chunk and return recognition result.
+     * Thread-safe.
      *
      * @param audioData Raw audio data (PCM 16-bit, mono, 16kHz)
      * @return RecognitionResult with text and isFinal flag, or null if no result
      */
+    @Synchronized
     fun acceptAudioChunk(audioData: ByteArray): RecognitionResult? {
+        // If releasing, don't process audio (prevents using freed resources)
+        if (isReleasing) {
+            Log.w(TAG, "Cannot accept audio: release() in progress")
+            return null
+        }
+
         val rec = recognizer ?: run {
             Log.w(TAG, "Recognizer not initialized")
             return null
@@ -175,19 +186,31 @@ class VoskWrapper @Inject constructor() {
     /**
      * Reset the recognizer state.
      * Call this to start a new recognition session.
+     * Thread-safe.
      */
+    @Synchronized
     fun reset() {
-        recognizer?.let {
-            try {
-                // Recreate recognizer with same model
-                model?.let { m ->
-                    recognizer = Recognizer(m, SAMPLE_RATE)
-                    lastPartialText = "" // Clear saved partial text
-                    Log.d(TAG, "Recognizer reset")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error resetting recognizer", e)
+        // If already releasing, don't reset (prevents race condition)
+        if (isReleasing) {
+            Log.w(TAG, "Cannot reset: release() in progress")
+            return
+        }
+
+        try {
+            // Close old recognizer first to prevent memory leak
+            recognizer?.close()
+
+            // Recreate recognizer with same model
+            model?.let { m ->
+                recognizer = Recognizer(m, SAMPLE_RATE)
+                lastPartialText = "" // Clear saved partial text
+                Log.d(TAG, "Recognizer reset")
+            } ?: run {
+                recognizer = null
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resetting recognizer", e)
+            recognizer = null
         }
     }
 
@@ -203,9 +226,26 @@ class VoskWrapper @Inject constructor() {
     /**
      * Release resources.
      * Call this when voice recognition is no longer needed.
+     * Safe to call multiple times (idempotent).
      */
+    @Synchronized
     fun release() {
+        // If already releasing, skip (prevents concurrent release calls from multiple services)
+        if (isReleasing) {
+            Log.w(TAG, "Release already in progress, skipping")
+            return
+        }
+
+        // Check if already released
+        if (recognizer == null && model == null) {
+            Log.d(TAG, "Already released, skipping")
+            return
+        }
+
         try {
+            isReleasing = true
+            Log.d(TAG, "Starting release of Vosk resources")
+
             recognizer?.close()
             recognizer = null
 
@@ -215,6 +255,8 @@ class VoskWrapper @Inject constructor() {
             Log.i(TAG, "Vosk resources released")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing Vosk resources", e)
+        } finally {
+            isReleasing = false
         }
     }
 }

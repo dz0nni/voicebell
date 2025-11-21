@@ -88,6 +88,7 @@ class TimerService : Service() {
     private var audioRecord: AudioRecord? = null
     private var voiceRecognitionJob: Job? = null
     @Volatile private var isListeningForStop = false
+    @Volatile private var isCleaningUpVoice = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -723,30 +724,56 @@ class TimerService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error in voice recognition: ${e.message}")
             } finally {
-                stopVoiceRecognition()
+                // Cleanup happens in stopVoiceRecognition, don't duplicate here
             }
         }
     }
 
     private fun stopVoiceRecognition() {
-        isListeningForStop = false
-        voiceRecognitionJob?.cancel()
-        voiceRecognitionJob = null
+        // Prevent multiple simultaneous cleanup attempts
+        if (isCleaningUpVoice) {
+            Log.d(TAG, "Voice recognition cleanup already in progress")
+            return
+        }
+        isCleaningUpVoice = true
 
+        // Set flag to stop the loop
+        isListeningForStop = false
+
+        // Stop audio recording IMMEDIATELY to prevent feeding more audio to Vosk
         try {
             audioRecord?.stop()
-            audioRecord?.release()
         } catch (e: Exception) {
             Log.w(TAG, "Error stopping audio record: ${e.message}")
         }
-        audioRecord = null
 
-        try {
-            voskWrapper.release()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error releasing Vosk: ${e.message}")
+        // Wait for voice recognition job to fully complete before releasing resources
+        // This prevents race condition where Vosk is used and released simultaneously
+        serviceScope.launch {
+            try {
+                voiceRecognitionJob?.join() // Wait for job to finish completely
+            } catch (e: Exception) {
+                Log.w(TAG, "Error joining voice recognition job: ${e.message}")
+            }
+            voiceRecognitionJob = null
+
+            // Now safe to release resources
+            try {
+                audioRecord?.release()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error releasing audio record: ${e.message}")
+            }
+            audioRecord = null
+
+            try {
+                voskWrapper.release()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error releasing Vosk: ${e.message}")
+            }
+
+            isCleaningUpVoice = false
+            Log.d(TAG, "Voice recognition stopped")
         }
-        Log.d(TAG, "Voice recognition stopped")
     }
 
     override fun onDestroy() {
